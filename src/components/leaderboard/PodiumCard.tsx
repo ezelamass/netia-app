@@ -1,136 +1,56 @@
-import { motion } from 'framer-motion';
-import { Crown, Medal, Award } from 'lucide-react';
+import { memo } from 'react';
+import { Flame } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { useGrowIn } from '@/hooks/useGrowIn';
+import { MEDALS } from './medals';
 
 interface PodiumCardProps {
   rank: 1 | 2 | 3;
   player: { name: string; points: number; streak: number };
+  /** Orden de entrada en ms */
   delay?: number;
+  className?: string;
 }
 
-const rankConfig = {
-  1: {
-    icon: Crown,
-    gradient: 'from-yellow-400 via-yellow-500 to-amber-600',
-    glow: 'shadow-[0_0_30px_rgba(251,191,36,0.5)]',
-    ringColor: 'ring-yellow-400',
-    avatarSize: 'w-20 h-20',
-    height: 'h-44',
-    labelBg: 'bg-yellow-500',
-  },
-  2: {
-    icon: Medal,
-    gradient: 'from-slate-300 via-slate-400 to-slate-500',
-    glow: 'shadow-[0_0_20px_rgba(148,163,184,0.4)]',
-    ringColor: 'ring-slate-400',
-    avatarSize: 'w-16 h-16',
-    height: 'h-36',
-    labelBg: 'bg-slate-400',
-  },
-  3: {
-    icon: Award,
-    gradient: 'from-amber-600 via-amber-700 to-amber-800',
-    glow: 'shadow-[0_0_20px_rgba(180,83,9,0.4)]',
-    ringColor: 'ring-amber-600',
-    avatarSize: 'w-14 h-14',
-    height: 'h-28',
-    labelBg: 'bg-amber-600',
-  },
-};
+const SIZE = { 1: { avatar: 'h-16 w-16 text-xl', block: 'h-32' }, 2: { avatar: 'h-14 w-14 text-lg', block: 'h-24' }, 3: { avatar: 'h-12 w-12 text-base', block: 'h-20' } } as const;
 
-export const PodiumCard = ({ rank, player, delay = 0 }: PodiumCardProps) => {
-  const config = rankConfig[rank];
-  const Icon = config.icon;
+export const PodiumCard = memo(({ rank, player, delay = 0, className }: PodiumCardProps) => {
+  const medal = MEDALS[rank];
+  const Icon = medal.icon;
+  const grow = useGrowIn(1);
+  const initials = player.name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 50 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.5, type: 'spring', bounce: 0.3 }}
-      className="flex flex-col items-center"
-    >
-      {/* Avatar with Icon */}
-      <div className="relative mb-3">
-        {/* Floating Icon */}
-        <motion.div
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ delay: delay + 0.3, duration: 0.5, type: 'spring' }}
-          className={cn(
-            'absolute -top-3 left-1/2 -translate-x-1/2 z-10',
-            'p-1.5 rounded-full',
-            `bg-gradient-to-br ${config.gradient}`,
-            config.glow
-          )}
+    <li className={cn('flex w-full min-w-0 flex-col items-center animate-fade-up', className)} style={{ animationDelay: `${delay}ms` }}>
+      <div className="relative mb-2">
+        <Avatar className={cn(SIZE[rank].avatar, 'ring-2 ring-offset-2 ring-offset-background', rank === 1 ? 'ring-warning' : rank === 2 ? 'ring-muted-foreground' : 'ring-primary')}>
+          <AvatarFallback className={cn('font-bold', medal.soft, medal.text)}>{initials}</AvatarFallback>
+        </Avatar>
+        <span
+          aria-hidden="true"
+          className={cn('absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full animate-pop-in', medal.solid)}
+          style={{ animationDelay: `${delay + 200}ms` }}
         >
-          <Icon className="w-4 h-4 text-white" />
-        </motion.div>
-
-        {/* Avatar */}
-        <motion.div
-          whileHover={{ scale: 1.1 }}
-          className={cn(
-            config.avatarSize,
-            'rounded-full ring-4',
-            config.ringColor,
-            rank === 1 && config.glow
-          )}
-        >
-          <Avatar className={cn(config.avatarSize, 'border-2 border-white')}>
-            <AvatarFallback
-              className={cn(
-                'text-white font-bold',
-                `bg-gradient-to-br ${config.gradient}`,
-                rank === 1 ? 'text-xl' : rank === 2 ? 'text-lg' : 'text-base'
-              )}
-            >
-              {player.name.split(' ').map(n => n[0]).join('')}
-            </AvatarFallback>
-          </Avatar>
-        </motion.div>
-      </div>
-
-      {/* Player Info */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: delay + 0.2 }}
-        className="text-center mb-2"
-      >
-        <p className={cn(
-          'font-semibold truncate max-w-24',
-          rank === 1 ? 'text-base' : 'text-sm'
-        )}>
-          {player.name.split(' ')[0]}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {player.streak}🔥
-        </p>
-      </motion.div>
-
-      {/* Podium Block */}
-      <motion.div
-        initial={{ scaleY: 0 }}
-        animate={{ scaleY: 1 }}
-        transition={{ delay: delay + 0.1, duration: 0.4 }}
-        style={{ originY: 1 }}
-        className={cn(
-          'w-full rounded-t-2xl flex flex-col items-center justify-start pt-3',
-          `bg-gradient-to-b ${config.gradient}`,
-          config.height,
-          rank === 1 && 'min-w-24'
-        )}
-      >
-        <span className={cn(
-          'text-white font-bold rounded-full w-8 h-8 flex items-center justify-center',
-          'bg-white/20 backdrop-blur-sm'
-        )}>
-          {rank}
+          <Icon className="h-3.5 w-3.5" />
         </span>
-        <p className="text-white font-bold text-lg mt-2">{player.points.toLocaleString()}</p>
-        <p className="text-white/80 text-xs">pts</p>
-      </motion.div>
-    </motion.div>
+      </div>
+      <p className="max-w-full truncate text-sm font-semibold">{player.name.split(' ')[0]}</p>
+      <p className="mb-2 flex items-center gap-0.5 text-xs text-muted-foreground tabular-nums">
+        <Flame className="h-3 w-3 text-primary" aria-hidden="true" />{player.streak}
+      </p>
+      <div
+        className={cn(
+          'flex w-full origin-bottom flex-col items-center rounded-t-2xl pt-3 transition-transform duration-slow ease-spring',
+          SIZE[rank].block, medal.soft,
+        )}
+        style={{ transform: `scaleY(${grow})`, transitionDelay: `${delay}ms` }}
+      >
+        <span className={cn('font-heading text-2xl font-bold', medal.text)}>{rank}</span>
+        <p className="mt-1 font-heading text-base font-bold tabular-nums">{player.points.toLocaleString('es-AR')}</p>
+        <p className="text-xs text-muted-foreground">XP</p>
+      </div>
+    </li>
   );
-};
+});
+PodiumCard.displayName = 'PodiumCard';

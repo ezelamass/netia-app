@@ -1,6 +1,8 @@
-import { motion } from 'framer-motion';
+import { memo } from 'react';
+import { Lock, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Progress } from '@/components/ui/progress';
+import { TONE_CLASSES, type Tone } from '@/lib/icons';
+import { useGrowIn } from '@/hooks/useGrowIn';
 
 interface BadgeCardProps {
   badge: {
@@ -14,65 +16,67 @@ interface BadgeCardProps {
     progress: number;
     isUnlocked: boolean;
   };
-  index?: number;
   compact?: boolean;
   /** Recién desbloqueado: el ícono entra con pop-in (spring) */
   celebrate?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-const categoryColors: Record<string, { bg: string; border: string }> = {
-  streak: { bg: 'bg-orange-500/10', border: 'border-orange-500/20' },
-  xp: { bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
-  wellness: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
-  training: { bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+const CATEGORY_TONE: Record<string, Tone> = {
+  streak: 'orange',
+  xp: 'roma',
+  wellness: 'zahia',
+  training: 'tino',
 };
 
-export const BadgeCard = ({ badge, index = 0, compact, celebrate }: BadgeCardProps) => {
-  const colors = categoryColors[badge.category] || categoryColors.streak;
+export const BadgeCard = memo(({ badge, compact, celebrate, className, style }: BadgeCardProps) => {
+  const tone = TONE_CLASSES[CATEGORY_TONE[badge.category] ?? 'orange'];
+  const progress = Math.max(0, Math.min(100, badge.progress));
+  const shown = useGrowIn(progress);
 
   if (compact) {
     return (
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ delay: index * 0.05 }}
+      <span
         title={badge.title}
         className={cn(
-          'w-10 h-10 rounded-full flex items-center justify-center text-lg',
-          badge.isUnlocked ? colors.bg : 'bg-muted grayscale opacity-40'
+          'flex h-10 w-10 items-center justify-center rounded-full text-lg',
+          badge.isUnlocked ? tone.bg : 'bg-muted opacity-40 grayscale',
+          className,
         )}
+        style={style}
       >
         {badge.icon}
-      </motion.div>
+      </span>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.05 }}
+    <li
+      style={style}
       className={cn(
-        'flex items-center gap-4 p-3 rounded-xl border transition-all',
-        badge.isUnlocked
-          ? `${colors.bg} ${colors.border}`
-          : 'bg-muted/30 border-border/50 opacity-70'
+        'flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3 shadow-card',
+        !badge.isUnlocked && 'bg-muted/40 shadow-none',
+        className,
       )}
     >
-      <div className={cn(
-        'w-12 h-12 rounded-full flex items-center justify-center text-2xl shrink-0',
-        badge.isUnlocked ? colors.bg : 'bg-muted',
-        celebrate && 'animate-pop-in'
-      )}>
-        {badge.isUnlocked ? badge.icon : '🔒'}
-      </div>
+      <span
+        aria-hidden="true"
+        className={cn(
+          'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl',
+          badge.isUnlocked ? tone.bg : 'bg-muted text-muted-foreground',
+          celebrate && 'animate-pop-in',
+        )}
+      >
+        {badge.isUnlocked ? badge.icon : <Lock className="h-4 w-4" />}
+      </span>
 
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <h4 className="font-semibold text-sm">{badge.title}</h4>
+          <h3 className="truncate text-sm font-semibold">{badge.title}</h3>
           {badge.isUnlocked && (
-            <span className="text-xs bg-emerald-500/20 text-emerald-600 px-2 py-0.5 rounded-full">
-              ✓
+            <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">
+              <Check className="h-3 w-3" aria-hidden="true" />Logrado
             </span>
           )}
         </div>
@@ -80,14 +84,24 @@ export const BadgeCard = ({ badge, index = 0, compact, celebrate }: BadgeCardPro
 
         {!badge.isUnlocked && (
           <div className="mt-2">
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+            <div className="mb-1 flex justify-between text-xs text-muted-foreground tabular-nums">
               <span>{badge.current} / {badge.requirement}</span>
-              <span>{Math.round(badge.progress)}%</span>
+              <span>{Math.round(progress)}%</span>
             </div>
-            <Progress value={badge.progress} className="h-1.5" />
+            <div
+              className="h-1.5 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuenow={Math.round(progress)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Progreso: ${badge.title}`}
+            >
+              <div className="h-full rounded-full bg-primary transition-[width] duration-slow ease-out" style={{ width: `${shown}%` }} />
+            </div>
           </div>
         )}
       </div>
-    </motion.div>
+    </li>
   );
-};
+});
+BadgeCard.displayName = 'BadgeCard';

@@ -1,28 +1,35 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { AppLayout } from '@/layouts/AppLayout';
-import { Card, CardContent } from '@/components/ui/card';
-import { Trophy, Clock, Gift, TrendingUp, Target } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { EmptyState } from '@/components/ui/empty-state';
-import { ListSkeleton } from '@/components/skeletons';
 import { useNavigate } from 'react-router-dom';
+import { Clock, Trophy, Target } from 'lucide-react';
+import { AppLayout } from '@/layouts/AppLayout';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { EmptyPanel } from '@/components/domain/EmptyPanel';
+import { ListSkeleton } from '@/components/skeletons';
+import { PageSkeleton } from '@/components/skeletons/PageSkeleton';
 import { PodiumCard, PrizeCard, PrizeDetailModal } from '@/components/leaderboard';
+import { SectionHeader } from '@/components/play/SectionHeader';
+import { StatPill } from '@/components/play/StatPill';
+import { CountUp } from '@/components/play/CountUp';
+import { IconBadge } from '@/components/play/IconBadge';
 import { usePrizes, getTimeRemaining, type Prize } from '@/hooks/usePrizes';
 import { useLeaderboard } from '@/hooks/useLeaderboard';
-import { LevelBadge } from '@/components/gamification';
-import confetti from 'canvas-confetti';
+import { staggerProps, useEnterOnce } from '@/hooks/useEnterOnce';
+import { cn } from '@/lib/utils';
+import { ICONS } from '@/lib/icons';
+import { LEVEL_CONFIG } from '@/types/gamification';
 
 const Leaderboard = () => {
   const navigate = useNavigate();
   const { entries, isLoading, currentUserEntry } = useLeaderboard();
-  const { prizes, isLoading: prizesLoading } = usePrizes();
+  const { prizes } = usePrizes();
+  const enter = useEnterOnce('leaderboard');
+  const st = (i: number) => staggerProps(enter, i);
   const [timeRemaining, setTimeRemaining] = useState(getTimeRemaining());
   const [selectedPrize, setSelectedPrize] = useState<{ prize: Prize; position: 1 | 2 | 3 } | null>(null);
   const [hasTriggeredConfetti, setHasTriggeredConfetti] = useState(false);
 
   useEffect(() => {
-    const interval = setInterval(() => setTimeRemaining(getTimeRemaining()), 1000);
+    const interval = setInterval(() => setTimeRemaining(getTimeRemaining()), 30_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -30,10 +37,21 @@ const Leaderboard = () => {
     if (currentUserEntry && currentUserEntry.rank <= 3 && !hasTriggeredConfetti) {
       setHasTriggeredConfetti(true);
       setTimeout(() => {
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.3 }, colors: ['#007BFF', '#FF6F3C', '#FFD700'] });
-      }, 800);
+        void import('canvas-confetti').then(m => m.default({ particleCount: 60, spread: 70, origin: { y: 0.3 }, scalar: 0.9, disableForReducedMotion: true }));
+      }, 600);
     }
   }, [currentUserEntry, hasTriggeredConfetti]);
+
+  if (isLoading && entries.length === 0) {
+    return (
+      <AppLayout>
+        <div className="mx-auto max-w-3xl space-y-6">
+          <PageSkeleton message="Armando el ranking…" />
+          <ListSkeleton rows={5} showAvatar showRank />
+        </div>
+      </AppLayout>
+    );
+  }
 
   const hasEnoughUsers = entries.length >= 3;
   const top3 = entries.slice(0, 3).map(e => ({ name: e.name, points: e.points, streak: e.streak }));
@@ -44,152 +62,127 @@ const Leaderboard = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Hero */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-3xl gradient-netia p-6 md:p-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="flex items-center gap-2 mb-2">
-                <Trophy className="w-7 h-7 text-white" />
-                <h1 className="text-2xl md:text-3xl font-bold text-white">Clasificación Semanal</h1>
-              </motion.div>
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="text-white/80 text-sm md:text-base">
-                Compite y gana premios exclusivos
-              </motion.p>
-            </div>
-
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }} className="glass-dark rounded-2xl px-4 py-3">
-              <div className="flex items-center gap-2 text-white/70 text-xs mb-1">
-                <Clock className="w-3.5 h-3.5" />
-                <span>Termina en</span>
-              </div>
-              <div className="flex gap-2 text-white font-bold text-lg">
-                <span>{timeRemaining.days}d</span>
-                <span>{timeRemaining.hours}h</span>
-                <span>{timeRemaining.minutes}m</span>
-              </div>
-            </motion.div>
+      <div data-page-ready="" className="mx-auto max-w-3xl space-y-6 pb-8">
+        <header className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+          <div className="min-w-0">
+            <h1 className="font-heading text-xl font-bold md:text-2xl">Ranking</h1>
+            <p className="text-sm text-muted-foreground">Sumá XP entrenando y registrando tu día. Los 3 primeros ganan premios.</p>
           </div>
+          <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end">
+            <StatPill
+              icon={Clock}
+              value={<span className="tabular-nums">{timeRemaining.days}d {timeRemaining.hours}h {timeRemaining.minutes}m</span>}
+              label="Tiempo que queda de la semana"
+              tone="slate"
+            />
+          </div>
+        </header>
 
-          {currentUserEntry && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="flex flex-wrap gap-3 mt-6">
-              <div className="glass-dark rounded-xl px-4 py-2">
-                <p className="text-white/70 text-xs">Tu posición</p>
-                <p className="text-white text-xl font-bold">#{currentUserEntry.rank}</p>
-              </div>
-              <div className="glass-dark rounded-xl px-4 py-2">
-                <p className="text-white/70 text-xs">Tus puntos</p>
-                <p className="text-white text-xl font-bold">{currentUserEntry.points.toLocaleString()}</p>
-              </div>
-              <div className="glass-dark rounded-xl px-4 py-2">
-                <p className="text-white/70 text-xs">Nivel</p>
-                <p className="text-white text-xl font-bold">{currentUserEntry.levelEmoji}</p>
-              </div>
+        {currentUserEntry && (
+          <section {...st(0)} aria-label="Tu posición">
+            <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-card">
+              <dl className="grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-xl bg-muted/50 px-2 py-3">
+                  <dd className="font-heading text-xl font-bold tabular-nums">#<CountUp value={currentUserEntry.rank} id="lb-rank" /></dd>
+                  <dt className="text-xs text-muted-foreground">Tu posición</dt>
+                </div>
+                <div className="rounded-xl bg-muted/50 px-2 py-3">
+                  <dd className="font-heading text-xl font-bold tabular-nums"><CountUp value={currentUserEntry.points} id="lb-xp" /></dd>
+                  <dt className="text-xs text-muted-foreground">Tu XP</dt>
+                </div>
+                <div className="rounded-xl bg-muted/50 px-2 py-3">
+                  <dd className="font-heading text-xl font-bold">{LEVEL_CONFIG[currentUserEntry.level].label}</dd>
+                  <dt className="text-xs text-muted-foreground">Tu nivel</dt>
+                </div>
+              </dl>
               {pointsToTop3 > 0 && (
-                <div className="glass-dark rounded-xl px-4 py-2 flex items-center gap-2">
-                  <Target className="w-4 h-4 text-white/70" />
-                  <div>
-                    <p className="text-white/70 text-xs">Para Top 3</p>
-                    <p className="text-white text-sm font-bold">+{pointsToTop3} pts</p>
-                  </div>
-                </div>
+                <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+                  <IconBadge icon={Target} tone="orange" size="sm" />
+                  <span>Te faltan <strong className="text-foreground tabular-nums">{pointsToTop3.toLocaleString('es-AR')} XP</strong> para entrar al Top 3.</span>
+                </p>
               )}
-            </motion.div>
-          )}
-        </motion.div>
-
-        {isLoading && (
-          <Card><CardContent className="p-6"><ListSkeleton rows={5} showAvatar showRank /></CardContent></Card>
+            </div>
+          </section>
         )}
 
-        {!isLoading && !hasEnoughUsers && (
-          <Card><CardContent className="p-6"><EmptyState variant="no-leaderboard" onAction={() => navigate('/training')} /></CardContent></Card>
+        {!hasEnoughUsers && (
+          <EmptyPanel
+            icon={Trophy}
+            title="El ranking se está armando"
+            description="Todavía no hay suficientes atletas activos esta semana. Seguí entrenando para aparecer."
+            actionLabel="Ir a entrenar"
+            onAction={() => navigate('/training')}
+          />
         )}
 
-        {!isLoading && hasEnoughUsers && (
+        {hasEnoughUsers && (
           <>
-            {/* Podium */}
-            <Card className="overflow-visible bg-transparent border-0 shadow-none">
-              <CardContent className="pt-8 pb-0 px-2">
-                <div className="grid grid-cols-3 gap-2 md:gap-4 items-end justify-items-center">
-                  <PodiumCard rank={2} player={top3[1]} delay={0.2} />
-                  <PodiumCard rank={1} player={top3[0]} delay={0.1} />
-                  <PodiumCard rank={3} player={top3[2]} delay={0.3} />
-                </div>
-              </CardContent>
-            </Card>
+            <section {...st(1)} aria-label="Podio">
+              <ol className="grid grid-cols-3 items-end gap-2 px-2 md:gap-4">
+                <PodiumCard rank={1} player={top3[0]} delay={0} className="order-2" />
+                <PodiumCard rank={2} player={top3[1]} delay={120} className="order-1" />
+                <PodiumCard rank={3} player={top3[2]} delay={240} className="order-3" />
+              </ol>
+            </section>
 
-            {/* List */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-4 text-muted-foreground">
-                  <TrendingUp className="w-4 h-4" />
-                  <span className="text-sm font-medium">Clasificación</span>
-                </div>
-                <div className="space-y-2">
-                  {restOfList.map((athlete, index) => (
-                    <motion.div
-                      key={athlete.userId}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4 + index * 0.1 }}
-                      className={`flex items-center gap-4 p-3 rounded-xl transition-colors ${
-                        currentUserEntry?.userId === athlete.userId
-                          ? 'bg-primary/10 border-2 border-primary/30'
-                          : 'bg-muted/50 hover:bg-muted'
-                      }`}
-                    >
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                        <span className="font-bold text-sm text-muted-foreground">{athlete.rank}</span>
-                      </div>
+            {restOfList.length > 0 && (
+              <section {...st(2)}>
+                <SectionHeader title="Clasificación" />
+                <ol className="space-y-2">
+                  {restOfList.map((athlete, index) => {
+                    const mine = currentUserEntry?.userId === athlete.userId;
+                    return (
+                      <li
+                        key={athlete.userId}
+                        className={cn(
+                          'flex items-center gap-3 rounded-2xl border p-3 transition-colors duration-fast animate-fade-up',
+                          mine ? 'border-primary/40 bg-primary-soft' : 'border-border/60 bg-card shadow-card hover:bg-muted/40',
+                        )}
+                        style={{ animationDelay: `${Math.min(index, 8) * 30}ms` }}
+                      >
+                        <span className="w-6 shrink-0 text-center text-sm font-bold text-muted-foreground tabular-nums">{athlete.rank}</span>
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-muted text-sm font-semibold">
+                            {athlete.name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold">
+                            {athlete.name}
+                            {mine && <span className="ml-2 text-xs font-normal text-primary">(Vos)</span>}
+                          </p>
+                          <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{LEVEL_CONFIG[athlete.level].label}</span>
+                            <span className="flex items-center gap-0.5 tabular-nums"><ICONS.streak.icon className="h-3 w-3 text-primary" aria-hidden="true" />{athlete.streak}</span>
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-heading text-base font-bold tabular-nums">{athlete.points.toLocaleString('es-AR')}</p>
+                          <p className="text-xs text-muted-foreground">XP</p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </section>
+            )}
 
-                      <Avatar className="w-10 h-10">
-                        <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white font-semibold text-sm">
-                          {athlete.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate">
-                          {athlete.name}
-                          {currentUserEntry?.userId === athlete.userId && (
-                            <span className="ml-2 text-xs text-primary font-normal">(Tú)</span>
-                          )}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {athlete.levelEmoji} · Racha: {athlete.streak} días 🔥
-                        </p>
-                      </div>
-
-                      <div className="text-right">
-                        <p className="text-base font-bold text-primary">{athlete.points.toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground">XP</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Prizes */}
             {prizes.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
-                <div className="flex items-center gap-2 mb-4">
-                  <Gift className="w-5 h-5 text-secondary" />
-                  <h2 className="text-xl font-bold">Premios del Podio</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {prizes.map((prize, index) => (
+              <section {...st(3)}>
+                <SectionHeader title="Premios del podio" />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {prizes.slice(0, 3).map((prize, index) => (
                     <PrizeCard
                       key={prize.id}
                       position={(index + 1) as 1 | 2 | 3}
                       prize={prize}
-                      delay={0.7 + index * 0.1}
+                      className="animate-fade-up"
+                      style={{ animationDelay: `${index * 30}ms` }}
                       onClick={() => setSelectedPrize({ prize, position: (index + 1) as 1 | 2 | 3 })}
                     />
                   ))}
                 </div>
-              </motion.div>
+              </section>
             )}
           </>
         )}

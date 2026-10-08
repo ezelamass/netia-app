@@ -1,14 +1,15 @@
-import { Crown, Medal, Award, Gift, Calendar, Building2 } from 'lucide-react';
+import { Gift, Calendar, Building2, Trophy } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import type { Prize } from '@/hooks/usePrizes';
+import { MEDALS } from './medals';
+import { IconBadge } from '@/components/play/IconBadge';
 
 interface PrizeDetailModalProps {
   prize: Prize | null;
@@ -17,32 +18,11 @@ interface PrizeDetailModalProps {
   onClose: () => void;
 }
 
-const positionConfig = {
-  1: {
-    icon: Crown,
-    label: '1er Premio',
-    gradient: 'from-yellow-400 to-amber-500',
-    iconColor: 'text-yellow-500',
-  },
-  2: {
-    icon: Medal,
-    label: '2do Premio',
-    gradient: 'from-slate-300 to-slate-500',
-    iconColor: 'text-slate-500',
-  },
-  3: {
-    icon: Award,
-    label: '3er Premio',
-    gradient: 'from-amber-500 to-amber-700',
-    iconColor: 'text-amber-600',
-  },
-};
-
 export const PrizeDetailModal = ({ prize, position, open, onClose }: PrizeDetailModalProps) => {
   if (!prize) return null;
 
-  const config = positionConfig[position];
-  const Icon = config.icon;
+  const medal = MEDALS[position];
+  const Icon = medal.icon;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -51,21 +31,15 @@ export const PrizeDetailModal = ({ prize, position, open, onClose }: PrizeDetail
         <div className="relative h-48">
           <img
             src={prize.imageUrl}
-            alt={prize.name}
+            alt=""
             className="w-full h-full object-cover"
           />
           <div className={cn(
             'absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent'
           )} />
-          <div className="absolute top-4 left-4">
-            <Badge className={cn(
-              'gap-1.5 text-white px-3 py-1',
-              `bg-gradient-to-r ${config.gradient}`
-            )}>
-              <Icon className="w-4 h-4" />
-              {config.label}
-            </Badge>
-          </div>
+          <span className={cn('absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold', medal.solid)}>
+            <Icon className="h-4 w-4" aria-hidden="true" />{medal.prize}
+          </span>
         </div>
 
         <DialogHeader className="px-6 pb-0">
@@ -82,9 +56,7 @@ export const PrizeDetailModal = ({ prize, position, open, onClose }: PrizeDetail
           <div className="grid grid-cols-2 gap-4">
             {prize.value && (
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-muted">
-                  <Gift className="w-4 h-4 text-primary" />
-                </div>
+                <IconBadge icon={Gift} tone="orange" size="sm" />
                 <div>
                   <p className="text-xs text-muted-foreground">Valor</p>
                   <p className="font-semibold text-sm">{prize.value}</p>
@@ -94,9 +66,7 @@ export const PrizeDetailModal = ({ prize, position, open, onClose }: PrizeDetail
 
             {prize.sponsor && (
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-muted">
-                  <Building2 className="w-4 h-4 text-primary" />
-                </div>
+                <IconBadge icon={Building2} tone="blue" size="sm" />
                 <div>
                   <p className="text-xs text-muted-foreground">Patrocinador</p>
                   <p className="font-semibold text-sm">{prize.sponsor}</p>
@@ -105,9 +75,7 @@ export const PrizeDetailModal = ({ prize, position, open, onClose }: PrizeDetail
             )}
 
             <div className="flex items-center gap-2 col-span-2">
-              <div className="p-2 rounded-lg bg-muted">
-                <Calendar className="w-4 h-4 text-primary" />
-              </div>
+              <IconBadge icon={Calendar} tone="slate" size="sm" />
               <div>
                 <p className="text-xs text-muted-foreground">Entrega</p>
                 <p className="font-semibold text-sm">Al finalizar la semana</p>
@@ -115,10 +83,9 @@ export const PrizeDetailModal = ({ prize, position, open, onClose }: PrizeDetail
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-muted/50 border border-border">
-            <p className="text-xs text-muted-foreground text-center">
-              🏆 ¡Consigue el <strong>Top {position}</strong> para ganar este premio!
-            </p>
+          <div className="flex items-center justify-center gap-2 rounded-xl bg-muted/50 p-4 text-xs text-muted-foreground">
+            <Trophy className="h-4 w-4 text-warning" aria-hidden="true" />
+            <p>Llegá al <strong className="text-foreground">Top {position}</strong> de la semana para ganar este premio.</p>
           </div>
         </div>
       </DialogContent>
