@@ -36,10 +36,9 @@ const Leaderboard = () => {
   useEffect(() => {
     if (currentUserEntry && currentUserEntry.rank <= 3 && !hasTriggeredConfetti) {
       setHasTriggeredConfetti(true);
-      const id = setTimeout(() => {
+      setTimeout(() => {
         void import('canvas-confetti').then(m => m.default({ particleCount: 60, spread: 70, origin: { y: 0.3 }, scalar: 0.9, disableForReducedMotion: true }));
       }, 600);
-      return () => clearTimeout(id);
     }
   }, [currentUserEntry, hasTriggeredConfetti]);
 
@@ -120,9 +119,9 @@ const Leaderboard = () => {
           <>
             <section {...st(1)} aria-label="Podio">
               <ol className="grid grid-cols-3 items-end gap-2 px-2 md:gap-4">
-                <PodiumCard rank={2} player={top3[1]} delay={120} />
-                <PodiumCard rank={1} player={top3[0]} delay={0} />
-                <PodiumCard rank={3} player={top3[2]} delay={240} />
+                <PodiumCard rank={1} player={top3[0]} delay={0} className="order-2" />
+                <PodiumCard rank={2} player={top3[1]} delay={120} className="order-1" />
+                <PodiumCard rank={3} player={top3[2]} delay={240} className="order-3" />
               </ol>
             </section>
 
@@ -144,7 +143,7 @@ const Leaderboard = () => {
                         <span className="w-6 shrink-0 text-center text-sm font-bold text-muted-foreground tabular-nums">{athlete.rank}</span>
                         <Avatar className="h-10 w-10">
                           <AvatarFallback className="bg-muted text-sm font-semibold">
-                            {athlete.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                            {athlete.name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">

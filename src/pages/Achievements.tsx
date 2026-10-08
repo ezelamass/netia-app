@@ -87,6 +87,7 @@ const Achievements = () => {
   // La primera visita no celebra lo que ya estaba: solo lo que se desbloqueó desde la última vez.
   const [justUnlocked, setJustUnlocked] = useState<ReadonlySet<string>>(new Set());
   useEffect(() => {
+    if (badgeProgress.length === 0) return; // todavía cargando: no guardar un estado vacío
     try {
       const KEY = 'netia_seen_badges';
       const raw = localStorage.getItem(KEY);
@@ -101,7 +102,7 @@ const Achievements = () => {
       }
       localStorage.setItem(KEY, JSON.stringify(now));
     } catch { /* sin storage */ }
-  }, [unlockedKey]);
+  }, [unlockedKey, badgeProgress.length]);
 
   if ((logsLoading || gamiLoading) && badgeProgress.length === 0) {
     return (
@@ -211,6 +212,7 @@ const Achievements = () => {
                   {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day, i) => (
                     <div key={i} className="mb-1 text-center text-xs text-muted-foreground">{day}</div>
                   ))}
+                  {Array.from({ length: (heatmapData[0].date.getDay() + 6) % 7 }, (_, i) => <div key={`pad-${i}`} aria-hidden="true" />)}
                   {heatmapData.map((day, i) => (
                     <div
                       key={i}

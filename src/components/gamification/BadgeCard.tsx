@@ -32,7 +32,8 @@ const CATEGORY_TONE: Record<string, Tone> = {
 
 export const BadgeCard = memo(({ badge, compact, celebrate, className, style }: BadgeCardProps) => {
   const tone = TONE_CLASSES[CATEGORY_TONE[badge.category] ?? 'orange'];
-  const shown = useGrowIn(badge.progress);
+  const progress = Math.max(0, Math.min(100, badge.progress));
+  const shown = useGrowIn(progress);
 
   if (compact) {
     return (
@@ -85,12 +86,12 @@ export const BadgeCard = memo(({ badge, compact, celebrate, className, style }: 
           <div className="mt-2">
             <div className="mb-1 flex justify-between text-xs text-muted-foreground tabular-nums">
               <span>{badge.current} / {badge.requirement}</span>
-              <span>{Math.round(badge.progress)}%</span>
+              <span>{Math.round(progress)}%</span>
             </div>
             <div
               className="h-1.5 overflow-hidden rounded-full bg-muted"
               role="progressbar"
-              aria-valuenow={Math.round(badge.progress)}
+              aria-valuenow={Math.round(progress)}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-label={`Progreso: ${badge.title}`}

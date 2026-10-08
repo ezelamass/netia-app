@@ -10,18 +10,19 @@ interface PodiumCardProps {
   player: { name: string; points: number; streak: number };
   /** Orden de entrada en ms */
   delay?: number;
+  className?: string;
 }
 
 const SIZE = { 1: { avatar: 'h-16 w-16 text-xl', block: 'h-32' }, 2: { avatar: 'h-14 w-14 text-lg', block: 'h-24' }, 3: { avatar: 'h-12 w-12 text-base', block: 'h-20' } } as const;
 
-export const PodiumCard = memo(({ rank, player, delay = 0 }: PodiumCardProps) => {
+export const PodiumCard = memo(({ rank, player, delay = 0, className }: PodiumCardProps) => {
   const medal = MEDALS[rank];
   const Icon = medal.icon;
   const grow = useGrowIn(1);
-  const initials = player.name.split(' ').map(n => n[0]).join('').slice(0, 2);
+  const initials = player.name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2);
 
   return (
-    <li className="flex w-full min-w-0 flex-col items-center animate-fade-up" style={{ animationDelay: `${delay}ms` }}>
+    <li className={cn('flex w-full min-w-0 flex-col items-center animate-fade-up', className)} style={{ animationDelay: `${delay}ms` }}>
       <div className="relative mb-2">
         <Avatar className={cn(SIZE[rank].avatar, 'ring-2 ring-offset-2 ring-offset-background', rank === 1 ? 'ring-warning' : rank === 2 ? 'ring-muted-foreground' : 'ring-primary')}>
           <AvatarFallback className={cn('font-bold', medal.soft, medal.text)}>{initials}</AvatarFallback>
