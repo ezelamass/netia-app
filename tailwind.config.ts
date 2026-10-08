@@ -47,9 +47,30 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        success: "hsl(var(--success))",
-        warning: "hsl(var(--warning))",
-        danger: "hsl(var(--danger))",
+        surface: {
+          DEFAULT: "hsl(var(--surface))",
+          raised: "hsl(var(--surface-raised))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+          soft: "hsl(var(--success-soft))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+          soft: "hsl(var(--warning-soft))",
+        },
+        danger: {
+          DEFAULT: "hsl(var(--danger))",
+          foreground: "hsl(var(--danger-foreground))",
+          soft: "hsl(var(--danger-soft))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+          soft: "hsl(var(--info-soft))",
+        },
         // NETIA Brand Colors
         netia: {
           blue: "hsl(var(--netia-blue))",
@@ -76,9 +97,14 @@ export default {
         ai: ['Nunito Sans', 'sans-serif'],
       },
       borderRadius: {
+        xl: "var(--radius-lg)",
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      boxShadow: {
+        card: "var(--shadow-card)",
+        pop: "var(--shadow-pop)",
       },
       keyframes: {
         "accordion-down": {

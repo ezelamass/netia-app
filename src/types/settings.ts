@@ -57,7 +57,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     weeklyEmail: true,
   },
   appearance: {
-    theme: 'system',
+    theme: 'light',
     showDashboardAvatar: true,
     animations: true,
     soundEffects: false,

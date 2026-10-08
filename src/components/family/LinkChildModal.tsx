@@ -8,18 +8,18 @@ import { UserPlus, Loader2 } from 'lucide-react';
 
 export const LinkChildModal = () => {
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const { linkChild } = useFamilyLinks();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!code.trim()) return;
     setLoading(true);
-    const success = await linkChild(email);
+    const success = await linkChild(code);
     setLoading(false);
     if (success) {
-      setEmail('');
+      setCode('');
       setOpen(false);
     }
   };
@@ -38,19 +38,20 @@ export const LinkChildModal = () => {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="child-email">Email del hijo/a</Label>
+            <Label htmlFor="child-code">Código de vinculación</Label>
             <Input
-              id="child-email"
-              type="email"
-              placeholder="hijo@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="child-code"
+              placeholder="A1B2C3D4"
+              maxLength={8}
+              className="uppercase tracking-widest"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Tu hijo/a debe tener una cuenta registrada en NETIA
+              Pedile el código a tu hijo/a (Configuración) o al club. Vence a los 7 días.
             </p>
           </div>
-          <Button type="submit" className="w-full" disabled={loading || !email.trim()}>
+          <Button type="submit" className="w-full" disabled={loading || !code.trim()}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Vincular
           </Button>

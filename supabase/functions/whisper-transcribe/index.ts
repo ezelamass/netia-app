@@ -1,9 +1,17 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { requireUser, jsonResponse } from "../_shared/auth.ts";
+
+const MAX_AUDIO_BYTES = 5 * 1024 * 1024;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: getCorsHeaders(req) });
+  }
+
+  const authedUser = await requireUser(req);
+  if (!authedUser) {
+    return jsonResponse({ error: 'Unauthorized' }, 401, getCorsHeaders(req));
   }
 
   try {
@@ -23,6 +31,10 @@ Deno.serve(async (req) => {
         status: 400,
         headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
       });
+    }
+
+    if (audioFile.size > MAX_AUDIO_BYTES) {
+      return jsonResponse({ error: 'Audio too large (max 5MB)' }, 413, getCorsHeaders(req));
     }
 
     const whisperForm = new FormData();
@@ -52,7 +64,7 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error('Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: 'Internal error' }), {
       status: 500,
       headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
     });

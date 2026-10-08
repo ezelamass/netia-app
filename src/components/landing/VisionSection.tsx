@@ -44,11 +44,11 @@ const VisionSection = () => {
           </div>
 
           {/* Right column — cards */}
-          <div className="flex-1 flex flex-col gap-4">
+          <div className="flex-1 min-w-0 flex flex-col gap-4">
             {visionCards.map((card, index) => (
               <motion.div
                 key={card.title}
-                className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex items-start gap-4"
+                className="min-w-0 bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex items-start gap-4"
                 initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: '-30px' }}

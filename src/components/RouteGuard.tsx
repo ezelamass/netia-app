@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
+import { roleHome } from '@/lib/roleHome';
 
 interface RouteGuardProps {
   children: ReactNode;
@@ -13,7 +14,7 @@ export const RouteGuard = ({
   allowedRoles,
   requireAuth = true 
 }: RouteGuardProps) => {
-  const { isAuthenticated, hasRole, isLoading } = useAuth();
+  const { isAuthenticated, hasRole, isLoading, user } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -32,7 +33,7 @@ export const RouteGuard = ({
   }
 
   if (allowedRoles && !hasRole(allowedRoles)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={roleHome(user?.role)} replace />;
   }
 
   return <>{children}</>;

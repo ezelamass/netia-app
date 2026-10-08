@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { AppLayout } from '@/layouts/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Heart, Calendar, TrendingUp } from 'lucide-react';
+import { useDemo } from '@/contexts/DemoContext';
+import { FamilyClubPanel } from '@/components/family/FamilyClubPanel';
 import { useFamilyLinks } from '@/hooks/useFamilyLinks';
 import { useMedicalClearance } from '@/hooks/useMedicalClearance';
 import { LinkChildModal } from '@/components/family/LinkChildModal';
@@ -10,6 +12,7 @@ import { MedicalClearanceStatus } from '@/components/medical/MedicalClearanceSta
 import { MedicalClearanceUpload } from '@/components/medical/MedicalClearanceUpload';
 
 const ParentDashboard = () => {
+  const { isDemoMode } = useDemo();
   const { links, fetchLinks } = useFamilyLinks();
   const { latestClearance, fetchClearances } = useMedicalClearance();
   const [firstChildId, setFirstChildId] = useState<string | undefined>();
@@ -37,6 +40,17 @@ const ParentDashboard = () => {
         ? 'text-destructive'
         : 'text-muted-foreground';
 
+  if (isDemoMode) {
+    return (
+      <AppLayout>
+        <div className="mx-auto max-w-2xl">
+          <h1 className="mb-4 text-xl font-bold font-heading">Panel familiar</h1>
+          <FamilyClubPanel />
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -57,7 +71,7 @@ const ParentDashboard = () => {
             <CardContent>
               <div className="text-2xl font-bold">{links.length}</div>
               <p className="text-xs text-muted-foreground">
-                {links.length === 0 ? 'Vincula a tu hijo/a para comenzar' : `${links.filter(l => l.consentGiven).length} con consentimiento`}
+                {links.length === 0 ? 'Vinculá a tu hijo/a con el código que te da el club' : `${links.filter(l => l.consentGiven).length} con consentimiento`}
               </p>
             </CardContent>
           </Card>
@@ -119,7 +133,7 @@ const ParentDashboard = () => {
               <h3 className="text-lg font-semibold mb-2">Vincula a tu hijo/a</h3>
               <p className="text-muted-foreground max-w-md">
                 Para ver la actividad, bienestar y progreso de tu hijo/a, primero necesitás vincularlo a tu cuenta
-                usando el botón "Vincular hijo/a" de arriba.
+                con el código de vinculación (lo genera tu hijo/a en Configuración, o te lo da el club), usando el botón "Vincular hijo/a" de arriba.
               </p>
             </CardContent>
           </Card>

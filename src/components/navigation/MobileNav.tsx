@@ -1,72 +1,56 @@
-import { Home, Dumbbell, Calendar, MessageCircle, Award, Building2, Users, BarChart3, Shield, UserCog, Heart } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface NavItem {
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  href: string;
-  badge?: number;
-}
-
-const playerNavItems: NavItem[] = [
-  { label: 'Inicio', icon: Home, href: '/dashboard' },
-  { label: 'Entrenar', icon: Dumbbell, href: '/training' },
-  { label: 'Calendario', icon: Calendar, href: '/calendar' },
-  { label: 'Chat IA', icon: MessageCircle, href: '/chat', badge: 3 },
-  { label: 'Logros', icon: Award, href: '/achievements' },
-];
-
-const parentNavItems: NavItem[] = [
-  { label: 'Panel', icon: Home, href: '/parent/dashboard' },
-  { label: 'Hijo/a', icon: Users, href: '/parent/child' },
-  { label: 'Apto Médico', icon: Heart, href: '/parent/medical' },
-];
-
-const clubNavItems: NavItem[] = [
-  { label: 'Panel', icon: Building2, href: '/club/dashboard' },
-  { label: 'Jugadores', icon: Users, href: '/club/roster' },
-  { label: 'Carga', icon: BarChart3, href: '/club/training-load' },
-  { label: 'Informes', icon: Dumbbell, href: '/club/reports' },
-  { label: 'Comunic.', icon: MessageCircle, href: '/club/communication' },
-];
-
-const adminNavItems: NavItem[] = [
-  { label: 'Dashboard', icon: Shield, href: '/admin/dashboard' },
-  { label: 'Usuarios', icon: UserCog, href: '/admin/users' },
-  { label: 'Analíticas', icon: BarChart3, href: '/admin/analytics' },
-];
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { footerNav, getMobileNav } from './navConfig';
 
 export const MobileNav = () => {
-  const { hasRole } = useAuth();
+  const { user } = useAuth();
+  const { primary, more } = getMobileNav(user?.role);
+  const overflow = [...more, ...footerNav];
 
-  const getNavItems = (): NavItem[] => {
-    if (hasRole('admin')) return adminNavItems;
-    if (hasRole('coach') || hasRole('club_admin')) return clubNavItems;
-    if (hasRole('parent')) return parentNavItems;
-    return playerNavItems;
-  };
-
-  const visibleItems = getNavItems();
+  const itemClass =
+    'flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 rounded-md min-w-[56px] text-muted-foreground hover:text-foreground';
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-background/95 backdrop-blur-lg border-t border-border">
-      <div className="flex justify-around items-center h-16 px-2">
-        {visibleItems.map((item) => (
-          <NavLink key={item.href} to={item.href}
-            className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all duration-300 min-w-[60px] hover:bg-primary/10"
-            activeClassName="text-primary">
-            <div className="relative">
-              <item.icon className="w-6 h-6 transition-all duration-300" />
-              {item.badge && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center font-semibold animate-pulse">
-                  {item.badge}
-                </span>
-              )}
-            </div>
-            <span className="text-xs font-medium transition-all duration-300">{item.label}</span>
+    <nav
+      aria-label="Navegación principal"
+      className="no-print fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-card/95 backdrop-blur border-t border-border pb-safe"
+    >
+      <div className="flex justify-around items-center h-16 px-1">
+        {primary.map((item) => (
+          <NavLink key={item.href} to={item.href} className={itemClass} activeClassName="text-primary">
+            <item.icon className="w-5 h-5" />
+            <span className="text-xs font-medium">{item.short ?? item.label}</span>
           </NavLink>
         ))}
+        <Sheet>
+          <SheetTrigger asChild>
+            <button type="button" className={itemClass} aria-label="Más opciones">
+              <MoreHorizontal className="w-5 h-5" />
+              <span className="text-xs font-medium">Más</span>
+            </button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="rounded-t-xl pb-safe">
+            <SheetHeader>
+              <SheetTitle>Más opciones</SheetTitle>
+            </SheetHeader>
+            <ul className="mt-4 grid grid-cols-1 gap-1">
+              {overflow.map((item) => (
+                <li key={item.href}>
+                  <NavLink
+                    to={item.href}
+                    className="flex items-center gap-3 rounded-md px-3 py-3 text-sm hover:bg-muted"
+                    activeClassName="bg-primary/10 text-primary font-medium"
+                  >
+                    <item.icon className="w-5 h-5" />
+                    {item.label}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </SheetContent>
+        </Sheet>
       </div>
     </nav>
   );

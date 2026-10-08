@@ -23,6 +23,7 @@ import {
   DeleteAccountModal,
   ExportDataModal,
 } from '@/components/settings/modals';
+import { FamilyCodeCard } from '@/components/family/FamilyCodeCard';
 import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -297,6 +298,9 @@ const Settings = () => {
               label="Descargar mis datos"
               onClick={() => setShowExportModal(true)}
             />
+            <div className="pt-2">
+              <FamilyCodeCard />
+            </div>
           </SettingsSection>
 
           {/* AI Avatars */}
