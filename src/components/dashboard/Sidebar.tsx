@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { footerNav, getNavGroups, prefetchRoute, roleLabels } from '@/components/navigation/navConfig';
+import { getNavGroups, prefetchRoute, roleLabels } from '@/components/navigation/navConfig';
+import { UserMenu } from '@/components/navigation/UserMenu';
 import { useCommandPalette } from '@/components/navigation/CommandPalette';
 
 export const Sidebar = () => {
@@ -95,19 +96,8 @@ export const Sidebar = () => {
           </SidebarGroup>
         ))}
 
-        <SidebarFooter className="mt-auto border-t border-border">
-          <SidebarMenu>
-            {footerNav.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild>
-                  <NavLink to={item.href} className={linkClass} activeClassName={activeClass} aria-label={item.label} onPointerEnter={() => prefetchRoute(item.href)}>
-                    <item.icon className="w-[18px] h-[18px] shrink-0" />
-                    {open && <span className="truncate">{item.label}</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
+        <SidebarFooter className="mt-auto border-t border-border p-2">
+          <UserMenu variant="sidebar" expanded={open} />
         </SidebarFooter>
       </SidebarContent>
     </SidebarUI>
