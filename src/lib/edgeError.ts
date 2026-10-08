@@ -2,7 +2,7 @@ import { FunctionsHttpError } from '@supabase/supabase-js';
 
 export type EdgeErrorCode =
   | 'unauthorized' | 'forbidden' | 'bad_request' | 'config' | 'upstream'
-  | 'timeout' | 'rate_limited' | 'gone' | 'internal' | 'network';
+  | 'timeout' | 'rate_limited' | 'gone' | 'busy' | 'internal' | 'network';
 
 export interface EdgeError {
   code: EdgeErrorCode;
@@ -12,13 +12,13 @@ export interface EdgeError {
 
 const KNOWN: EdgeErrorCode[] = [
   'unauthorized', 'forbidden', 'bad_request', 'config', 'upstream',
-  'timeout', 'rate_limited', 'gone', 'internal',
+  'timeout', 'rate_limited', 'gone', 'busy', 'internal',
 ];
 
 const fromStatus = (status: number): EdgeErrorCode =>
   status === 401 ? 'unauthorized'
     : status === 403 ? 'forbidden'
-    : status === 409 ? 'gone'
+    : status === 409 ? 'busy'
     : status === 429 ? 'rate_limited'
     : status === 504 ? 'timeout'
     : status >= 500 ? 'internal'

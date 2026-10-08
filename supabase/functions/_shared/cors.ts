@@ -5,8 +5,10 @@ const BASE_ORIGINS = [
   "http://localhost:3000",
 ];
 
-// Previews de Vercel del proyecto: netia-futuro-brillante-<hash>-<equipo>.vercel.app
-const PREVIEW_ORIGIN = /^https:\/\/netia-futuro-brillante(-[a-z0-9-]+)?\.vercel\.app$/;
+// Previews de Vercel del proyecto, atados a los equipos de Ezequiel (cualquiera puede registrar un proyecto
+// con un nombre parecido, así que el slug del equipo es lo que lo hace propio):
+// netia-futuro-brillante-<hash>-<equipo>.vercel.app y netia-futuro-brillante-git-<rama>-<equipo>.vercel.app
+const PREVIEW_ORIGIN = /^https:\/\/netia-futuro-brillante-[a-z0-9-]+-(ezelamass|elamasprojects)-projects\.vercel\.app$/;
 
 function extraOrigins(): string[] {
   return (Deno.env.get("ALLOWED_ORIGINS") ?? "")

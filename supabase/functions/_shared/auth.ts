@@ -35,6 +35,7 @@ export type ErrorCode =
   | "timeout"
   | "rate_limited"
   | "gone"
+  | "busy"
   | "internal";
 
 /** Respuesta de error uniforme: `{ error, code }`. El cliente decide el mensaje según `code`. */

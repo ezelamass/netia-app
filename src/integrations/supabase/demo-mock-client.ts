@@ -431,7 +431,22 @@ const handleFunctionInvoke = async (
     const msgs = getTable('ai_messages');
     const isFirst = !msgs.some((m) => m.conversation_id === conversationId);
     let userRow = clientMessageId ? msgs.find((m) => m.conversation_id === conversationId && m.client_message_id === clientMessageId) : undefined;
-    if (!userRow) {
+    if (userRow) {
+      // Reintento ya respondido: devolver lo guardado en vez de contestar de nuevo.
+      const idx = msgs.indexOf(userRow);
+      const replies: any[] = [];
+      for (let i = idx + 1; i < msgs.length && msgs[i].conversation_id === conversationId && msgs[i].role !== 'user'; i++) replies.push(msgs[i]);
+      if (replies.length) {
+        return {
+          data: {
+            userMessage: { id: userRow.id, created_at: userRow.created_at },
+            respuesta: replies.map((r) => ({ id: r.id, text: r.content, created_at: r.created_at })),
+            derivar: null,
+          },
+          error: null,
+        };
+      }
+    } else {
       userRow = { id: newId('ai_messages'), conversation_id: conversationId, role: 'user', content: message ?? '', created_at: new Date().toISOString(), client_message_id: clientMessageId };
       msgs.push(userRow);
     }

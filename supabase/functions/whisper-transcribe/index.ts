@@ -40,6 +40,12 @@ Deno.serve(async (req) => {
       return errorResponse(500, "config", "OpenAI key not configured", cors);
     }
 
+    // Antes de leer el cuerpo entero: un upload enorme se rechaza sin cargarlo en memoria.
+    const declared = Number(req.headers.get("content-length") ?? 0);
+    if (declared > MAX_AUDIO_BYTES + 64 * 1024) {
+      return errorResponse(413, "bad_request", "Audio too large (max 5MB)", cors);
+    }
+
     const formData = await req.formData();
     const audioFile = formData.get("audio");
     if (!audioFile || !(audioFile instanceof File)) {

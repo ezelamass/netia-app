@@ -23,6 +23,9 @@ const EMBEDDING_TIMEOUT_MS = 8_000;
 const RAG_MATCH_COUNT = 4;
 const RAG_THRESHOLD = 0.3;
 const RAG_MIN_CHARS = 12;
+// El cliente corta a los 30 s; el servidor puede tardar hasta ~28 s (embedding 8 s + OpenAI 20 s).
+const BUSY_WINDOW_MS = 35_000;
+const RETRY_MATCH_WINDOW_MS = 120_000;
 const CHAT_MODEL = Deno.env.get("OPENAI_CHAT_MODEL") ?? "gpt-4o-mini";
 
 const AVATAR_RAG_TABLES: Record<AvatarId, string> = {
@@ -150,6 +153,45 @@ async function getRecentUserCount(db: Db, userId: string): Promise<number> {
   return count ?? 0;
 }
 
+/** Respuestas guardadas justo después de un mensaje del usuario (filas de más nueva a más vieja; devuelve de vieja a nueva). */
+function repliesAfter(rowsNewestFirst: Row[], idx: number): Row[] {
+  const out: Row[] = [];
+  for (let i = idx - 1; i >= 0 && rowsNewestFirst[i].role !== "user"; i--) out.push(rowsNewestFirst[i]);
+  return out;
+}
+
+function replayResponse(userRow: Row, replies: Row[], cors: Record<string, string>) {
+  return jsonResponse({
+    userMessage: { id: userRow.id, created_at: userRow.created_at },
+    respuesta: replies.map((r) => ({ id: r.id, text: r.content, created_at: r.created_at })),
+    derivar: null,
+  }, 200, cors);
+}
+
+/** El mensaje ya existía (carrera o historial largo): devuelve lo que ya se respondió, o avisa que sigue en curso. */
+async function replayOrBusy(db: Db, conversationId: string, clientMessageId: string, cors: Record<string, string>) {
+  const { data: row } = await db.from("ai_messages")
+    .select("id, role, content, created_at")
+    .eq("conversation_id", conversationId)
+    .eq("client_message_id", clientMessageId)
+    .maybeSingle();
+  if (row) {
+    const { data: after } = await db.from("ai_messages")
+      .select("id, role, content, created_at")
+      .eq("conversation_id", conversationId)
+      .gt("created_at", row.created_at)
+      .order("created_at", { ascending: true })
+      .limit(10);
+    const replies: Row[] = [];
+    for (const r of (after ?? []) as Row[]) {
+      if (r.role === "user") break;
+      replies.push(r);
+    }
+    if (replies.length) return replayResponse(row, replies, cors);
+  }
+  return errorResponse(409, "busy", "Previous attempt still running", cors);
+}
+
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
@@ -181,12 +223,10 @@ Deno.serve(async (req) => {
     const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const userId = authedUser.id;
 
-    // Todo lo que no depende entre sí, en paralelo.
-    const [convo, recent, userCtx, ragChunks, recentUserCount] = await Promise.all([
+    // Etapa 1: solo consultas baratas de base. Propiedad y límite se validan antes de gastar en OpenAI.
+    const [convo, recent, recentUserCount] = await Promise.all([
       db.from("ai_conversations").select("user_id").eq("id", conversationId).maybeSingle(),
       getRecentRows(db, conversationId),
-      getUserContext(db, userId),
-      getRagChunks(db, avatar, message, openaiKey),
       getRecentUserCount(db, userId),
     ]);
 
@@ -194,21 +234,21 @@ Deno.serve(async (req) => {
     if (convo.data.user_id !== userId) return errorResponse(403, "forbidden", "Conversation not owned by user", cors);
 
     // Reintento: el mensaje del usuario ya se guardó en un intento anterior.
-    const existingIdx = clientMessageId && recent.hasClientId
-      ? recent.rows.findIndex((r) => r.client_message_id === clientMessageId)
-      : -1;
+    let existingIdx = -1;
+    if (clientMessageId) {
+      existingIdx = recent.hasClientId
+        ? recent.rows.findIndex((r) => r.client_message_id === clientMessageId)
+        // Sin la columna nueva no hay id: se reconoce el reintento por ser el último mensaje, idéntico y reciente.
+        : (recent.rows[0]?.role === "user" && recent.rows[0].content === message &&
+            Date.now() - new Date(recent.rows[0].created_at).getTime() < RETRY_MATCH_WINDOW_MS ? 0 : -1);
+    }
     const existing = existingIdx >= 0 ? recent.rows[existingIdx] : null;
     if (existing) {
-      const answered = recent.rows
-        .slice(0, existingIdx) // filas más nuevas que el mensaje del usuario
-        .filter((r) => r.role !== "user")
-        .reverse();
-      if (answered.length) {
-        return jsonResponse({
-          userMessage: { id: existing.id, created_at: existing.created_at },
-          respuesta: answered.map((r) => ({ id: r.id, text: r.content, created_at: r.created_at })),
-          derivar: null,
-        }, 200, cors);
+      const answered = repliesAfter(recent.rows, existingIdx);
+      if (answered.length) return replayResponse(existing, answered, cors);
+      // Sin respuesta todavía: si el intento anterior puede seguir vivo, no se genera una segunda.
+      if (Date.now() - new Date(existing.created_at).getTime() < BUSY_WINDOW_MS) {
+        return errorResponse(409, "busy", "Previous attempt still running", cors);
       }
     } else if (recentUserCount >= RATE_LIMIT_PER_HOUR) {
       return errorResponse(429, "rate_limited", "Too many messages", cors);
@@ -219,31 +259,42 @@ Deno.serve(async (req) => {
     const isFirstMessage = olderRows.length === 0;
     const history = buildHistory(olderRows as { role: string; content: string }[]).slice(-HISTORY_MESSAGES);
 
-    // Guardar el mensaje del usuario (una sola vez).
+    // Etapa 2, en paralelo: contexto del chico, RAG y guardado del mensaje del usuario (una sola vez).
+    // El created_at sale del mismo reloj que el de las respuestas, así el orden no depende de dos relojes.
+    const insertUser = (withClientId: boolean) =>
+      db.from("ai_messages")
+        .insert({
+          conversation_id: conversationId,
+          role: "user",
+          content: message,
+          created_at: new Date().toISOString(),
+          ...(withClientId && clientMessageId ? { client_message_id: clientMessageId } : {}),
+        })
+        .select("id, created_at")
+        .single();
+    const saveUserMessage = async () => {
+      let res = await insertUser(true);
+      if (res.error?.code === MISSING_COLUMN) res = await insertUser(false);
+      return res;
+    };
+    const [userCtx, ragChunks, savedUser] = await Promise.all([
+      getUserContext(db, userId),
+      getRagChunks(db, avatar, message, openaiKey),
+      existing ? Promise.resolve(null) : saveUserMessage(),
+    ]);
+
     let userMessage: { id: string; created_at: string };
     if (existing) {
       userMessage = { id: existing.id, created_at: existing.created_at };
     } else {
-      const insertUser = (withClientId: boolean) =>
-        db.from("ai_messages")
-          .insert({
-            conversation_id: conversationId,
-            role: "user",
-            content: message,
-            ...(withClientId && clientMessageId ? { client_message_id: clientMessageId } : {}),
-          })
-          .select("id, created_at")
-          .single();
-      let res = await insertUser(true);
-      if (res.error?.code === MISSING_COLUMN) res = await insertUser(false);
-      if (res.error || !res.data) {
-        const code = res.error?.code;
-        console.error("Insert user message failed:", code, res.error?.message);
+      if (!savedUser || savedUser.error || !savedUser.data) {
+        const code = savedUser?.error?.code;
+        console.error("Insert user message failed:", code, savedUser?.error?.message);
         if (code === FK_VIOLATION) return errorResponse(409, "gone", "Conversation deleted", cors);
-        if (code === UNIQUE_VIOLATION) return errorResponse(409, "bad_request", "Duplicate message", cors);
+        if (code === UNIQUE_VIOLATION && clientMessageId) return await replayOrBusy(db, conversationId, clientMessageId, cors);
         return errorResponse(500, "internal", "Could not save message", cors);
       }
-      userMessage = { id: res.data.id, created_at: res.data.created_at };
+      userMessage = { id: savedUser.data.id, created_at: savedUser.data.created_at };
     }
 
     // OpenAI
