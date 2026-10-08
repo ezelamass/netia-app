@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
 import { ExampleChat } from './ExampleChat';
-import tinoAvatar from '@/assets/tino-avatar.png';
-import zahiaAvatar from '@/assets/zahia-avatar.png';
-import romaAvatar from '@/assets/roma-avatar.png';
+import tinoAvatar from '@/assets/tino-team.webp';
+import zahiaAvatar from '@/assets/zahia-team.webp';
+import romaAvatar from '@/assets/roma-team.webp';
 
 const avatars = [
   {

@@ -1,14 +1,14 @@
-import tino from '@/assets/tino-avatar.avif';
-import zahia from '@/assets/zahia-avatar.avif';
-import roma from '@/assets/roma-avatar.avif';
+import tino from '@/assets/tino-team.webp';
+import zahia from '@/assets/zahia-team.webp';
+import roma from '@/assets/roma-team.webp';
 import { AIMark } from '@/components/ai';
 import { ExampleChat } from '../ExampleChat';
 import { Reveal } from './Reveal';
 
 const avatars = [
-  { name: 'TINO', role: 'Entrenamiento', img: tino, text: 'Rutinas, hábitos y motivación para entrenar mejor.' },
-  { name: 'ZAHIA', role: 'Nutrición y bienestar', img: zahia, text: 'Hidratación, alimentación y descanso, explicados simple.' },
-  { name: 'ROMA', role: 'Foco mental', img: roma, text: 'Confianza, manejo de la presión y constancia.' },
+  { name: 'Tino', role: 'Coach técnico', img: tino, bg: 'bg-[#EBF4FF]', chip: 'bg-blue-50 text-primary', text: 'Rutinas, hábitos y motivación para entrenar mejor.' },
+  { name: 'Zahia', role: 'Nutricionista', img: zahia, bg: 'bg-[#E8FBF5]', chip: 'bg-emerald-50 text-emerald-600', text: 'Hidratación, alimentación y descanso, explicados simple.' },
+  { name: 'Roma', role: 'Psicóloga deportiva', img: roma, bg: 'bg-[#F3EFFE]', chip: 'bg-purple-50 text-[#7A5AF5]', text: 'Confianza, manejo de la presión y constancia.' },
 ];
 
 const AiSection = () => (
@@ -27,11 +27,13 @@ const AiSection = () => (
         {avatars.map((a, i) => (
           <li key={a.name}>
             <Reveal delay={i * 0.08} className="h-full">
-              <article className="flex h-full flex-col items-center rounded-2xl bg-card p-6 text-center shadow-card">
-                <img src={a.img} alt={`Avatar ${a.name}`} width={112} height={112} loading="lazy" className="h-28 w-28 rounded-full object-cover" />
-                <h3 className="mt-4 font-heading text-xl font-bold">{a.name}</h3>
-                <p className="text-sm font-medium text-primary">{a.role}</p>
-                <p className="mt-2 text-muted-foreground">{a.text}</p>
+              <article className={`flex h-full flex-col items-center rounded-2xl p-6 ${a.bg} dark:bg-card`}>
+                <img src={a.img} alt={`${a.name}, ${a.role}`} width={224} height={224} loading="lazy" className="h-48 w-48 object-contain drop-shadow-md sm:h-56 sm:w-56" />
+                <div className="mt-4 w-full text-left">
+                  <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${a.chip}`}>{a.role}</span>
+                  <h3 className="mt-1 font-heading text-xl font-bold text-foreground">{a.name}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{a.text}</p>
+                </div>
               </article>
             </Reveal>
           </li>
