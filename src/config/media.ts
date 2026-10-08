@@ -1,5 +1,6 @@
-/** Video institucional de la landing (1:30). Vacío = el botón "Ver video" no se muestra. */
+/** Video institucional de la landing (1:20). Vacío = no se muestra ningún video. */
 export const INSTITUTIONAL_VIDEO = {
-  src: '',
-  poster: '/landing/panel-desktop.webp',
+  src: '/video/netia-institucional.mp4',
+  poster: '/video/poster.webp',
+  captions: '/video/netia-institucional.es-AR.vtt',
 };

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Star, ArrowUpRight, Play } from 'lucide-react';
 import { motion } from 'framer-motion';
+import HeroVideo from '@/components/landing/HeroVideo';
 
 interface HeroSectionProps {
   onDemoClick?: () => void;
@@ -68,18 +69,14 @@ const HeroSection = ({ onDemoClick }: HeroSectionProps) => {
             </div>
           </div>
 
-          {/* Right column — Avatar composition */}
+          {/* Right column — video institucional */}
           <motion.div
-            className="flex-1 flex justify-center lg:justify-end"
+            className="w-full flex-1 lg:max-w-[560px]"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: 'easeOut' }}
           >
-            <img
-              src="/sViZyLi3Y0j6V0Q4SHeYIzTxv8.avif"
-              alt="Equipo Netia — Zahia, Tino y Roma"
-              className="w-[340px] sm:w-[460px] lg:w-[540px] object-contain drop-shadow-lg"
-            />
+            <HeroVideo />
           </motion.div>
         </div>
       </div>
