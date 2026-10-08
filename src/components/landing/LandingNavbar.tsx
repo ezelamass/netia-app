@@ -1,125 +1,73 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Play, Eye } from 'lucide-react';
 
 const navLinks = [
-  { label: 'Nosotros', href: '#nosotros' },
-  { label: 'Campus', href: '#campus' },
-  { label: 'Avatares', href: '#avatares' },
-  { label: 'Planes', href: '#planes' },
+  { label: 'Producto', href: '#producto' },
+  { label: 'Para quién', href: '#para-quien' },
+  { label: 'Precios', href: '#planes' },
+  { label: 'FAQ', href: '#faq' },
 ];
 
-interface LandingNavbarProps {
-  onDemoClick?: () => void;
-  onTourClick?: () => void;
+interface Props {
+  onContactClick: () => void;
 }
 
-const LandingNavbar = ({ onDemoClick, onTourClick }: LandingNavbarProps) => {
-  const [mobileOpen, setMobileOpen] = useState(false);
+const LandingNavbar = ({ onContactClick }: Props) => {
+  const [open, setOpen] = useState(false);
 
   return (
-    <nav className="w-full bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="text-2xl font-heading font-bold text-secondary">
-          Netia
+    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/85 backdrop-blur">
+      <nav aria-label="Principal" className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+        <Link to="/" className="flex items-center gap-2" aria-label="NETIA, inicio">
+          <img src="/logo.png" alt="" width={32} height={32} className="h-8 w-8 rounded-md" />
+          <span className="font-heading text-xl font-bold">NETIA</span>
         </Link>
 
-        {/* Desktop nav links */}
-        <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-[18px] font-medium text-foreground hover:text-secondary transition-colors"
-            >
-              {link.label}
+        <div className="hidden items-center gap-7 md:flex">
+          {navLinks.map((l) => (
+            <a key={l.href} href={l.href} className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+              {l.label}
             </a>
           ))}
         </div>
 
-        {/* Right side */}
-        <div className="hidden md:flex items-center gap-4">
-          <Button
-            variant="ghost"
-            className="rounded-full px-4 py-2 text-sm font-medium gap-1.5 text-muted-foreground hover:text-foreground"
-            onClick={onTourClick}
-          >
-            <Eye className="w-3.5 h-3.5" />
-            Ver Tour
-          </Button>
-          <Button
-            variant="outline"
-            className="rounded-full px-5 py-2 text-sm font-medium gap-1.5 border-secondary text-secondary hover:bg-secondary/10"
-            onClick={onDemoClick}
-          >
-            <Play className="w-3.5 h-3.5" />
-            Probar Demo
-          </Button>
-          <Link to="/register">
-            <Button className="rounded-full px-6 py-2 text-[16px] font-medium">
-              Inscribite
-            </Button>
-          </Link>
+        <div className="hidden items-center gap-2 md:flex">
+          <Button variant="ghost" asChild><Link to="/login">Ingresar</Link></Button>
+          <Button variant="outline" onClick={onContactClick}>Contacto</Button>
+          <Button asChild><Link to="/demo">Probá la demo</Link></Button>
         </div>
 
-        {/* Mobile right cluster: tour + demo always visible, rest in hamburger.
-            We expose the two highest-intent CTAs so visitors don't have to open
-            the menu to discover the demo. */}
-        <div className="md:hidden flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onTourClick}
-            aria-label="Ver tour"
-            className="flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <Eye className="w-5 h-5" />
-          </button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-full h-10 px-4 text-sm font-medium gap-1.5 border-secondary text-secondary hover:bg-secondary/10"
-            onClick={onDemoClick}
-          >
-            <Play className="w-3.5 h-3.5" />
-            Demo
-          </Button>
-          <button
-            className="p-2 text-foreground"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="Menú"
-            aria-expanded={mobileOpen}
-          >
-            {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-      </div>
+        <button
+          type="button"
+          className="-mr-2 flex h-11 w-11 items-center justify-center rounded-md md:hidden"
+          aria-expanded={open}
+          aria-controls="landing-mobile-menu"
+          aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
+          onClick={() => setOpen((o) => !o)}
+        >
+          {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
+      </nav>
 
-      {/* Mobile menu — section navigation + Inscribite. Tour and Demo are
-          already in the always-visible top cluster, so they're omitted here. */}
-      {mobileOpen && (
-        <div className="md:hidden bg-white border-t px-4 pb-4">
-          <div className="flex flex-col gap-1 pt-2">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="block py-3 text-base font-medium text-foreground hover:text-secondary transition-colors"
-                onClick={() => setMobileOpen(false)}
-              >
-                {link.label}
-              </a>
+      {open && (
+        <div id="landing-mobile-menu" className="border-t border-border bg-background px-4 pb-4 md:hidden">
+          <ul className="flex flex-col py-2">
+            {navLinks.map((l) => (
+              <li key={l.href}>
+                <a href={l.href} onClick={() => setOpen(false)} className="flex min-h-11 items-center text-base font-medium">{l.label}</a>
+              </li>
             ))}
-            <Link to="/register" onClick={() => setMobileOpen(false)} className="mt-2">
-              <Button className="rounded-full w-full h-11 text-base font-medium">
-                Inscribite
-              </Button>
-            </Link>
+            <li><Link to="/login" className="flex min-h-11 items-center text-base font-medium">Ingresar</Link></li>
+          </ul>
+          <div className="flex flex-col gap-2">
+            <Button asChild className="h-11"><Link to="/demo">Probá la demo</Link></Button>
+            <Button variant="outline" className="h-11" onClick={() => { setOpen(false); onContactClick(); }}>Contacto</Button>
           </div>
         </div>
       )}
-    </nav>
+    </header>
   );
 };
 

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { realSupabase } from '@/integrations/supabase/client';
 import { CONTACT } from '@/config/contact';
 import { demoUi, useDemoUi } from '@/demo/ui';
+import { isDemoActive } from '@/demo/session';
 
 /** "Quiero esto para mi club": guarda el lead en Supabase; si falla, abre mail/WhatsApp prellenado. */
 export const LeadForm = () => {
@@ -32,7 +33,7 @@ export const LeadForm = () => {
     setState('sending');
     const { error } = await realSupabase.from('leads' as never).insert({
       name: name.trim(), club: club.trim(), sport: sport.trim() || null,
-      members_count: members ? Number(members) : null, contact: contact.trim(), source: 'demo',
+      members_count: members ? Number(members) : null, contact: contact.trim(), source: isDemoActive() ? 'demo' : 'landing',
     } as never);
     if (error) {
       if (!CONTACT.whatsapp && !CONTACT.email) {
