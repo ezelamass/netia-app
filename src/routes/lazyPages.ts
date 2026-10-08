@@ -3,6 +3,7 @@ import { lazy } from "react";
 /** Cargadores de cada página: App.tsx los usa con lazy() y navConfig para precargar. */
 export const loaders = {
   LandingPage: () => import("../pages/LandingPage"),
+  ClubsLandingPage: () => import("../pages/ClubsLandingPage"),
   Login: () => import("../pages/Login"),
   Register: () => import("../pages/Register"),
   NotFound: () => import("../pages/NotFound"),
@@ -49,6 +50,7 @@ export const loaders = {
 export type PageName = keyof typeof loaders;
 
 export const LandingPage = lazy(loaders.LandingPage);
+export const ClubsLandingPage = lazy(loaders.ClubsLandingPage);
 export const Login = lazy(loaders.Login);
 export const Register = lazy(loaders.Register);
 export const NotFound = lazy(loaders.NotFound);

@@ -13,6 +13,7 @@ import { AppShell } from "@/layouts/AppShell";
 import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
 import {
   LandingPage,
+  ClubsLandingPage,
   Login,
   Register,
   NotFound,
@@ -95,6 +96,7 @@ const App = () => (
                 <Routes>
                   {/* Public routes */}
                   <Route path="/" element={<LandingPage />} />
+                  <Route path="/clubes" element={<ClubsLandingPage />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/demo" element={<Demo />} />
