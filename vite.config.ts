@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => ({
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "framer-motion"],
   },
+  esbuild: { legalComments: "none" },
   build: {
     manifest: true,
     rollupOptions: {

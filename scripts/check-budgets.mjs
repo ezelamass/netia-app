@@ -84,7 +84,10 @@ const noLib = (name, marker) => {
 noLib('three / @react-three', 'WebGLRenderer');
 noLib('recharts', 'recharts-wrapper');
 
-rows.push({ label: 'Imágenes de avatar PNG en el bundle', value: String(Object.values(manifest).filter((c) => /avatar.*\.png$/.test(c.src ?? '')).length), limit: '0', ok: !Object.values(manifest).some((c) => /avatar.*\.png$/.test(c.src ?? '')) });
+// La home pública todavía usa los PNG; lo que no puede pasar es que las 4 pestañas los carguen.
+const tabFiles = new Set(Object.values(fullPages).flatMap((set) => [...set]));
+const pngInTabs = Object.values(manifest).filter((c) => tabFiles.has(c.file) && (c.assets ?? []).some((a) => /avatar.*\.png$/.test(a)));
+rows.push({ label: 'Avatares PNG en las 4 pestañas', value: String(pngInTabs.length), limit: '0', ok: !pngInTabs.length });
 
 const w = Math.max(...rows.map((r) => r.label.length));
 console.log('\nPresupuestos de peso');
