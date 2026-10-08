@@ -56,7 +56,7 @@ export const NutritionStep = () => {
           {/* Breakfast Before Training */}
           <div className="space-y-3">
             <Label className="flex items-center gap-2 text-sm font-medium">
-              <Utensils className="w-4 h-4 text-[hsl(162,100%,39%)]" />
+              <Utensils className="w-4 h-4 text-zahia" />
               ¿Desayunás antes de entrenar?
             </Label>
             <RadioGroup
@@ -70,8 +70,8 @@ export const NutritionStep = () => {
                   htmlFor={`breakfast-${opt.value}`}
                   className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${
                     data.breakfastBeforeTraining === opt.value
-                      ? 'border-[hsl(162,100%,39%)] bg-[hsl(162,100%,39%)]/10'
-                      : 'border-border hover:border-[hsl(162,100%,39%)]/50'
+                      ? 'border-zahia bg-zahia/10'
+                      : 'border-border hover:border-zahia/50'
                   }`}
                 >
                   <RadioGroupItem value={opt.value} id={`breakfast-${opt.value}`} className="sr-only" />
@@ -85,7 +85,7 @@ export const NutritionStep = () => {
           {/* Meals Per Day */}
           <div className="space-y-3">
             <Label className="flex items-center gap-2 text-sm font-medium">
-              <Apple className="w-4 h-4 text-[hsl(162,100%,39%)]" />
+              <Apple className="w-4 h-4 text-zahia" />
               ¿Cuántas comidas hacés por día?
             </Label>
             <div className="flex gap-2">
@@ -96,7 +96,7 @@ export const NutritionStep = () => {
                   onClick={() => updateData({ mealsPerDay: count })}
                   className={`flex-1 p-3 rounded-xl text-lg font-bold transition-all ${
                     data.mealsPerDay === count
-                      ? 'bg-[hsl(162,100%,39%)] text-white'
+                      ? 'bg-zahia text-white'
                       : 'bg-muted text-muted-foreground hover:bg-muted/80'
                   }`}
                 >
@@ -109,7 +109,7 @@ export const NutritionStep = () => {
           {/* Hydration Level */}
           <div className="space-y-3">
             <Label className="flex items-center gap-2 text-sm font-medium">
-              <Droplets className="w-4 h-4 text-[hsl(162,100%,39%)]" />
+              <Droplets className="w-4 h-4 text-zahia" />
               ¿Cómo calificás tu hidratación?
             </Label>
             <div className="flex gap-2 justify-center">
@@ -141,7 +141,7 @@ export const NutritionStep = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-2 text-sm font-medium">
-                <Pill className="w-4 h-4 text-[hsl(162,100%,39%)]" />
+                <Pill className="w-4 h-4 text-zahia" />
                 ¿Tomás suplementos?
               </Label>
               <Switch
@@ -178,7 +178,7 @@ export const NutritionStep = () => {
                   onClick={() => toggleRestriction(rest.value)}
                   className={`px-3 py-2 rounded-full text-sm font-medium transition-all ${
                     data.dietaryRestrictions?.includes(rest.value)
-                      ? 'bg-[hsl(162,100%,39%)] text-white'
+                      ? 'bg-zahia text-white'
                       : 'bg-muted text-muted-foreground hover:bg-muted/80'
                   }`}
                 >

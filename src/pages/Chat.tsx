@@ -2,12 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AppLayout } from '@/layouts/AppLayout';
 import { useChat } from '@/hooks/useChat';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { AGENTS, AVATAR_IDS, type AvatarId } from '@/lib/avatars';
-import { AgentSwitcher } from '@/components/play/AgentSwitcher';
-import { AgentAvatar } from '@/components/play/AgentAvatar';
 import { ChatHeader } from '@/components/chat/ChatHeader';
 import { ChatHistoryDrawer } from '@/components/chat/ChatHistoryDrawer';
+import { ChatList } from '@/components/chat/ChatList';
 import { MessageList } from '@/components/chat/MessageList';
+import { MessageBubble } from '@/components/chat/MessageBubble';
+import { SystemChip, AI_NOTICE } from '@/components/chat/SystemChip';
 import { ChatSkeleton } from '@/components/skeletons/ChatSkeleton';
 import { AIInput } from '@/components/ui/ai-input';
 import { cn } from '@/lib/utils';
@@ -18,7 +20,6 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const LAST_AGENT_KEY = 'netia_chat_last_agent';
-const PANEL_ID = 'chat-panel';
 
 const parseAgent = (v: string | null): AvatarId | null => {
   const up = v?.toUpperCase();
@@ -29,48 +30,59 @@ const readLastAgent = (): AvatarId | null => {
   try { return parseAgent(localStorage.getItem(LAST_AGENT_KEY)); } catch { return null; }
 };
 
-const TINT: Record<AvatarId, string> = {
-  TINO: 'bg-tino/[0.03]',
-  ZAHIA: 'bg-zahia/[0.03]',
-  ROMA: 'bg-roma/[0.03]',
-};
-
+/**
+ * Chat con el modelo mental de WhatsApp.
+ * Mobile: lista de chats → conversación (flecha atrás). Desktop (≥ lg): dos paneles.
+ * Deep links: `?agente=` abre la conversación, `?q=` precarga el texto (sin enviar).
+ */
 const Chat = () => {
   const [params, setParams] = useSearchParams();
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [fallback] = useState<AvatarId>(() => readLastAgent() ?? 'TINO');
-  const agent = parseAgent(params.get('agente')) ?? fallback;
+  const paramAgent = parseAgent(params.get('agente'));
+  const agent = paramAgent ?? fallback;
+  // En mobile sin ?agente= se ve la lista; en desktop siempre hay una conversación abierta.
+  const inConversation = isDesktop || !!paramAgent;
 
-  const chat = useChat(agent);
+  const chat = useChat(agent, inConversation);
   const { toast } = useToast();
   const [drafts, setDrafts] = useState<Record<AvatarId, string>>({ TINO: '', ZAHIA: '', ROMA: '' });
   const [historyOpen, setHistoryOpen] = useState(false);
   const [confirmNew, setConfirmNew] = useState(false);
 
-  // ?agente= manda; si falta, se completa con el último usado (o TINO).
-  // ?q= precarga el input (sin enviar) y se limpia de la URL.
+  // ?q= precarga el input del agente indicado y se limpia de la URL (el agente queda en ?agente=).
   useEffect(() => {
     const q = params.get('q');
-    if (q) setDrafts((d) => ({ ...d, [agent]: q }));
-    if (!params.get('agente') || q) {
-      setParams((p) => {
-        p.set('agente', agent);
-        p.delete('q');
-        return p;
-      }, { replace: true });
-    }
+    if (!q) return;
+    setDrafts((d) => ({ ...d, [agent]: q }));
+    setParams((p) => {
+      p.set('agente', agent);
+      p.delete('q');
+      return p;
+    }, { replace: true });
     // Solo al montar: después, los cambios de agente pasan por selectAgent.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selectAgent = useCallback((next: AvatarId) => {
     try { localStorage.setItem(LAST_AGENT_KEY, next); } catch { /* sin storage */ }
-    setParams((p) => { p.set('agente', next); return p; }, { replace: true });
+    setParams((p) => { p.set('agente', next); return p; }, { replace: isDesktop });
+  }, [setParams, isDesktop]);
+
+  const backToList = useCallback(() => {
+    setParams((p) => { p.delete('agente'); return p; }, { replace: true });
   }, [setParams]);
 
   const setDraft = useCallback((v: string) => setDrafts((d) => ({ ...d, [agent]: v })), [agent]);
 
   const userCount = chat.messages.filter((m) => m.sender === 'user').length;
   const isEmpty = chat.messages.length === 0;
+  const loading = chat.isLoading || chat.isLoadingMessages;
+
+  const send = (text: string) => {
+    chat.clearHandoff(agent);
+    void chat.sendMessage(text);
+  };
 
   const onSubmit = (text: string) => {
     if (chat.isSending) return false;
@@ -78,8 +90,7 @@ const Chat = () => {
       toast({ title: 'Límite alcanzado', description: 'Eliminá una conversación para crear una nueva.' });
       return false;
     }
-    chat.clearHandoff(agent);
-    void chat.sendMessage(text);
+    send(text);
     return true;
   };
 
@@ -95,22 +106,44 @@ const Chat = () => {
     setConfirmNew(true);
   };
 
+  const notice = <SystemChip className="mb-1 mt-2">{AI_NOTICE}</SystemChip>;
+
   return (
     <AppLayout>
       <div
         data-page-ready={chat.isLoading ? undefined : ''}
-        className="mx-auto flex h-[calc(100dvh-3.5rem-var(--banner-h,0px)-1.25rem-6rem)] max-w-3xl flex-col gap-2 lg:h-[calc(100dvh-3.5rem-var(--banner-h,0px)-1.25rem-2rem)]"
+        className={cn(
+          'mx-auto flex max-w-5xl overflow-hidden rounded-2xl bg-card shadow-card',
+          'h-[calc(100dvh-3.5rem-var(--banner-h,0px)-1.25rem-6rem)]',
+          paramAgent && 'h-[calc(100dvh-3.5rem-var(--banner-h,0px)-1.25rem-1rem)]',
+          'lg:h-[calc(100dvh-3.5rem-var(--banner-h,0px)-1.25rem-2rem)]',
+        )}
       >
-        <AgentSwitcher value={agent} onChange={selectAgent} unread={chat.unread} panelId={PANEL_ID} className="mx-auto w-full lg:max-w-[480px]" />
+        <aside
+          aria-label="Chats"
+          className={cn(
+            'min-h-0 w-full shrink-0 flex-col border-border/60 lg:flex lg:w-80 lg:border-r',
+            inConversation ? 'hidden' : 'flex animate-fade-up',
+          )}
+        >
+          <ChatList
+            active={inConversation ? agent : null}
+            lastMessages={chat.lastMessages}
+            unread={chat.unread}
+            typing={{ [agent]: chat.isSending }}
+            onSelect={selectAgent}
+          />
+        </aside>
 
-        <div
-          id={PANEL_ID}
-          role="tabpanel"
-          aria-labelledby={`agent-tab-${agent}`}
-          className={cn('flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border/60 bg-surface-raised shadow-card', TINT[agent])}
+        <section
+          key={inConversation ? agent : 'list'}
+          aria-label={`Conversación con ${AGENTS[agent].name}`}
+          className={cn('min-h-0 min-w-0 flex-1 flex-col', inConversation ? 'flex' : 'hidden lg:flex', !isDesktop && inConversation && 'animate-slide-in-right')}
         >
           <ChatHeader
             avatar={agent}
+            typing={chat.isSending}
+            onBack={backToList}
             onNewChat={onNewChat}
             onOpenHistory={() => setHistoryOpen(true)}
             disabled={chat.isSending}
@@ -119,53 +152,56 @@ const Chat = () => {
             maxCount={5}
           />
 
-          {chat.isLoading || chat.isLoadingMessages ? (
-            <div className="flex-1 overflow-hidden"><ChatSkeleton messageCount={4} /></div>
-          ) : isEmpty ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-              <AgentAvatar agent={agent} size={96} ring />
-              <h1 className="font-heading text-xl font-bold md:text-2xl">¡Hola! Soy {AGENTS[agent].name}</h1>
-              <p className="max-w-sm text-sm text-muted-foreground">{AGENTS[agent].description}</p>
-            </div>
-          ) : (
-            <MessageList
-              agent={agent}
-              scopeKey={`${agent}:${chat.activeConvoId}`}
-              messages={chat.messages}
-              isTyping={chat.isSending}
-              handoff={chat.handoff}
-              onHandoff={onHandoff}
-            />
-          )}
+          <div className="chat-wallpaper flex min-h-0 flex-1 flex-col">
+            {loading ? (
+              <div className="flex-1 overflow-hidden"><ChatSkeleton messageCount={4} /></div>
+            ) : isEmpty ? (
+              <div className="flex flex-1 flex-col justify-end gap-2 px-3 pb-3 lg:px-6">
+                {notice}
+                <MessageBubble isUser={false} first fresh text={`¡Hola! Soy ${AGENTS[agent].name}. ${AGENTS[agent].description}`} />
+              </div>
+            ) : (
+              <MessageList
+                agent={agent}
+                scopeKey={`${agent}:${chat.activeConvoId}`}
+                messages={chat.messages}
+                isTyping={chat.isSending}
+                handoff={chat.handoff}
+                onHandoff={onHandoff}
+                header={notice}
+              />
+            )}
 
-          {userCount < 3 && !chat.isLoading && (
-            <div className="flex gap-2 overflow-x-auto px-3 pb-2 pt-1 [scrollbar-width:none]" aria-label="Sugerencias">
-              {AGENTS[agent].suggestions.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  disabled={chat.isSending}
-                  onClick={() => { chat.clearHandoff(agent); void chat.sendMessage(s); }}
-                  className="shrink-0 rounded-full border border-border/60 bg-card px-3 py-1.5 text-xs font-medium transition-colors duration-150 hover:bg-primary-soft hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
+            {userCount < 3 && !chat.isLoading && (
+              <div className="flex gap-2 overflow-x-auto px-3 pb-2 pt-1 [scrollbar-width:none] lg:px-6" aria-label="Sugerencias">
+                {AGENTS[agent].suggestions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={chat.isSending}
+                    onClick={() => send(s)}
+                    className="shrink-0 rounded-full bg-card px-3 py-1.5 text-xs font-medium shadow-bubble transition-[color,background-color,transform] duration-fast hover:bg-primary-soft hover:text-primary active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          <div className="border-t border-border/60 bg-card/95 px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] lg:pb-2.5">
-            <AIInput
-              id="chat-input"
-              placeholder={`Escribile a ${AGENTS[agent].name}…`}
-              value={drafts[agent]}
-              onValueChange={setDraft}
-              onSubmit={onSubmit}
-              minHeight={44}
-              maxHeight={140}
-            />
+            <div className="px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 lg:px-6 lg:pb-3">
+              <AIInput
+                variant="chat"
+                id="chat-input"
+                placeholder="Mensaje"
+                value={drafts[agent]}
+                onValueChange={setDraft}
+                onSubmit={onSubmit}
+                minHeight={44}
+                maxHeight={140}
+              />
+            </div>
           </div>
-        </div>
+        </section>
 
         <ChatHistoryDrawer
           open={historyOpen}

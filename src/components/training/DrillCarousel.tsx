@@ -25,7 +25,7 @@ export const DrillCarousel = () => {
             aria-pressed={skill === s}
             onClick={() => setSkill(s)}
             className={cn(
-              'shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-[color,background-color,border-color,transform] duration-fast active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               skill === s ? 'border-primary bg-primary-soft text-primary' : 'border-border/60 bg-card text-muted-foreground hover:bg-muted',
             )}
           >
@@ -43,7 +43,7 @@ export const DrillCarousel = () => {
               key={d.id}
               type="button"
               onClick={() => setOpen(d)}
-              className="w-40 shrink-0 snap-start overflow-hidden rounded-2xl border border-border/60 bg-card text-left transition-colors duration-150 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="w-40 shrink-0 snap-start overflow-hidden rounded-2xl border border-border/60 bg-card text-left transition-[color,background-color,border-color,transform] duration-fast active:scale-[.97] hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className={cn('flex h-20 items-center justify-center', t.bg, t.text)}>
                 <Icon className="h-9 w-9" strokeWidth={1.75} aria-hidden="true" />

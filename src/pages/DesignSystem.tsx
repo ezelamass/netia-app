@@ -11,10 +11,12 @@ import {
   type Column, type FeeStatus, type MedicalStatus,
 } from '@/components/domain';
 import { AgentAvatar, IconBadge, PreviewBadge, ProgressRing, SectionHeader, StatPill } from '@/components/play';
-import { Rule, Section } from './design-system/parts';
-import { AiSection } from './design-system/ai-demos';
-import { ChatSection, CriterioSection } from './design-system/chat-demos';
-import { LoadingSection, MotionSection } from './design-system/motion-demos';
+import { Rule, Section } from '@/components/design-system/parts';
+import { AiSection } from '@/components/design-system/AiSection';
+import { MotionSection } from '@/components/design-system/MotionSection';
+import { LoadingSection } from '@/components/design-system/LoadingSection';
+import { ChatSection } from '@/components/design-system/ChatSection';
+import { CriterioSection } from '@/components/design-system/CriterioSection';
 
 type Skin = 'club' | 'play';
 
@@ -40,6 +42,9 @@ const SWATCHES: { token: string; cls: string; note: string }[] = [
   { token: '--avatar-tino', cls: 'bg-tino', note: 'TINO · entreno' },
   { token: '--avatar-zahia', cls: 'bg-zahia', note: 'ZAHIA · nutrición' },
   { token: '--avatar-roma', cls: 'bg-roma', note: 'ROMA · mente' },
+  { token: '--chat-bg', cls: 'bg-chat-bg', note: 'Fondo del chat (con papel tapiz)' },
+  { token: '--chat-out', cls: 'bg-chat-out', note: 'Burbuja propia (cambia con la piel)' },
+  { token: '--chat-system', cls: 'bg-chat-system', note: 'Chips de sistema y aviso de IA' },
 ];
 
 interface Row { id: string; name: string; cat: string; fee: FeeStatus; med: MedicalStatus; att: number }
@@ -61,7 +66,8 @@ const TONES = Object.keys(TONE_CLASSES) as Tone[];
 
 const NAV = [
   ['principios', 'Principios'], ['color', 'Color'], ['tipografia', 'Tipografía'], ['forma', 'Forma'],
-  ['iconos', 'Íconos'], ['ia', 'IA'], ['componentes', 'Componentes'], ['movimiento', 'Movimiento'], ['carga', 'Carga'], ['chat', 'Chat'], ['estados', 'Estados'], ['criterio', 'Criterio visual'], ['reglas', 'Mobile y a11y'], ['checklist', 'Checklist'],
+  ['iconos', 'Íconos'], ['ia', 'IA'], ['movimiento', 'Movimiento'], ['carga', 'Carga'], ['chat', 'Chat'],
+  ['componentes', 'Componentes'], ['estados', 'Estados'], ['criterio', 'Criterio visual'], ['reglas', 'Reglas'], ['checklist', 'Checklist'],
 ] as const;
 
 const DesignSystem = () => {
@@ -118,7 +124,7 @@ const DesignSystem = () => {
           Guía para crear pantallas nuevas que se vean igual que las actuales. Todo lo que ves abajo son los componentes reales de la app, no capturas: usá el selector de arriba para cambiar de piel y de modo.
         </p>
 
-        <Section id="principios" title="Principios" lead="Seis decisiones que explican el resto.">
+        <Section id="principios" title="Principios" lead="Cinco decisiones que explican el resto.">
           <ol className="grid gap-3 sm:grid-cols-2">
             {[
               ['Dos pieles, una base', 'Club, coach y admin usan la piel Club (azul, sobria, densa). Jugador y familia usan Play (naranja, más cálida y redondeada). Mismos tokens, distinto acento.'],
@@ -126,7 +132,6 @@ const DesignSystem = () => {
               ['Claro por defecto', 'Fondo blanco o blanco hueso. El modo oscuro tiene que funcionar, pero nunca es el estado inicial.'],
               ['Nada falso presentado como real', 'Si un dato es de ejemplo o la función es un mockup, se marca con “Vista previa” o el aviso de datos de ejemplo.'],
               ['Estado = color + ícono + texto', 'Nunca solo color. Hay personas daltónicas y hay pantallas al sol en la cancha.'],
-              ['La IA tiene su propia señal', 'TINO, ZAHIA y ROMA son la IA de NETIA y solo ellos usan el gradiente del equipo. Lo que escribe la IA va firmado y se puede descartar.'],
             ].map(([t, d], i) => (
               <li key={t} className="rounded-xl border border-border bg-card p-4">
                 <p className="text-xs font-semibold tabular-nums text-primary">0{i + 1}</p>
@@ -149,18 +154,17 @@ const DesignSystem = () => {
           </ul>
         </Section>
 
-        <Section id="tipografia" title="Tipografía" lead="Dos familias: Poppins solo para títulos (excepción de marca) e Inter para todo lo demás, incluido el chat. Más de una familia en el cuerpo es el delator de una interfaz amateur.">
+        <Section id="tipografia" title="Tipografía" lead="Dos familias: Poppins para títulos (excepción de marca) e Inter para todo lo demás, incluido el chat. Más de una familia en la interfaz es el delator número uno de una pantalla amateur.">
           <div className="space-y-3 rounded-xl border border-border bg-card p-5">
             <p className="font-heading text-3xl font-bold">Título de página · Poppins 700</p>
             <p className="font-heading text-xl font-semibold">Título de sección · Poppins 600</p>
             <p className="text-sm">Texto de interfaz en Inter 14px. El mínimo absoluto en toda la app es 12px.</p>
             <p className="text-sm text-muted-foreground">Texto secundario: <span className="tabular-nums">$ 12.500 · 94% · 18/24</span> con números tabulares.</p>
-            <p className="text-sm">Burbuja de chat, también en Inter: “¡Buen laburo hoy! ¿Cómo sentiste las piernas?”</p>
+            <p className="text-sm">Burbuja de chat en Inter: “¡Buen laburo hoy! ¿Cómo sentiste las piernas?”</p>
           </div>
           <ul className="mt-5 space-y-1.5">
             <Rule ok>Todo número en KPIs, tablas y fechas con <code className="text-xs">tabular-nums</code>.</Rule>
             <Rule ok>Interfaz en español rioplatense con voseo: “Entrá”, “Podés”, “Tu equipo”.</Rule>
-            <Rule ok={false}>Tamaños arbitrarios (<code className="text-xs">text-[11px]</code>): solo la escala de Tailwind, mínimo <code className="text-xs">text-xs</code>.</Rule>
             <Rule ok={false}>Texto en inglés ni en español neutro; tampoco roles sin traducir (usar Entrenador, Administrador de club, Familia, Jugador).</Rule>
           </ul>
         </Section>
@@ -180,6 +184,7 @@ const DesignSystem = () => {
               <p className="text-xs text-muted-foreground">Totalmente redondos.</p>
             </div>
           </div>
+          <p className="mt-4 text-sm text-muted-foreground">El movimiento tiene su propia sección: tokens de duración y curva, micro interacciones y reglas.</p>
         </Section>
 
         <Section id="iconos" title="Íconos" lead="Solo Lucide, nunca emojis como ícono. Cada concepto usa siempre el mismo (fuente única: src/lib/icons.ts).">
@@ -189,7 +194,7 @@ const DesignSystem = () => {
                 <IconBadge icon={icon} tone={tone} size="sm" />
                 <div className="min-w-0">
                   <p className="truncate font-mono text-xs font-medium">{key}</p>
-                  <p className="text-[11px] text-muted-foreground">{tone}</p>
+                  <p className="text-xs text-muted-foreground">{tone}</p>
                 </div>
               </div>
             ))}
@@ -205,6 +210,9 @@ const DesignSystem = () => {
         </Section>
 
         <AiSection />
+        <MotionSection />
+        <LoadingSection />
+        <ChatSection />
 
         <Section id="componentes" title="Componentes" lead="Armá las pantallas con estas piezas antes de crear nada nuevo. Los de dominio viven en src/components/domain y el kit Play en src/components/play.">
           <h3 className="mb-2 font-heading text-sm font-semibold text-muted-foreground">Encabezado de página (PageHeader)</h3>
@@ -272,16 +280,10 @@ const DesignSystem = () => {
           <p className="mt-3 text-sm text-muted-foreground">Botones, inputs, diálogos, tabs y toasts: siempre de <code>src/components/ui</code> (shadcn). No se re-implementan.</p>
         </Section>
 
-        <MotionSection />
-
-        <LoadingSection />
-
-        <ChatSection />
-
         <Section id="estados" title="Estados" lead="Toda pantalla con datos resuelve estos cuatro casos. Ninguna queda en blanco.">
           <div className="grid gap-3 sm:grid-cols-2">
             {[
-              ['Cargando', 'Skeleton con la forma del contenido final (PageSkeleton, components/skeletons). Nunca un spinner a pantalla completa.'],
+              ['Cargando', 'Skeleton con shimmer y la forma del contenido final (PageSkeleton, components/skeletons), solo si pasa los 150 ms. Nunca un spinner a pantalla completa.'],
               ['Vacío', 'EmptyPanel con ícono, una frase que explique por qué está vacío y un botón para salir de ahí.'],
               ['Error', 'Mensaje en español que diga qué pasó y qué hacer, con botón “Reintentar”. Nada de códigos técnicos.'],
               ['Datos de ejemplo', 'SampleDataNotice si el dato no es real; PreviewBadge si la función es un mockup.'],
@@ -317,8 +319,9 @@ const DesignSystem = () => {
             <li>Resolvé carga, vacío y error. Marcá lo que sea de ejemplo.</li>
             <li>Texto en español rioplatense, números con <code>tabular-nums</code>.</li>
             <li>Probá en claro y oscuro, en 390px y 1440px, y navegando solo con teclado.</li>
-            <li>Toda acción tiene feedback: carga, éxito y error. Si lo hizo la IA, va firmado y se puede descartar.</li>
-            <li>Corré <code>npm run lint</code>, <code>npm run lint:ui</code> y <code>npm run build</code>; si tocaste las 4 pestañas principales, también <code>node scripts/check-budgets.mjs</code>.</li>
+            <li>Toda acción tiene feedback: carga, éxito y error. Nada pasa en silencio.</li>
+            <li>Si lo hizo la IA: va firmado (<code>AIBadge</code> o el avatar del agente) y se puede descartar.</li>
+            <li>Corré <code>npm run lint:ui</code> (criterio visual), <code>npm run lint</code> y <code>npm run build</code>; si tocaste las 4 pestañas principales, también <code>node scripts/check-budgets.mjs</code>.</li>
           </ol>
           <div className="mt-6">
             <Button asChild><Link to="/demo">Ver la app en acción</Link></Button>

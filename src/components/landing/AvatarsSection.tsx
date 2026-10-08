@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { ExampleChat } from './ExampleChat';
 import tinoAvatar from '@/assets/tino-avatar.png';
 import zahiaAvatar from '@/assets/zahia-avatar.png';
 import romaAvatar from '@/assets/roma-avatar.png';
@@ -40,7 +41,7 @@ const AvatarsSection = () => {
             Avatares
           </span>
           <h2 className="text-2xl sm:text-3xl lg:text-[40px] leading-tight font-heading font-bold text-[#363636]">
-            Tu Netia Team 24 / 7
+            Tu Netia Team de <span className="bg-ai bg-clip-text text-transparent">IA</span>, 24 / 7
           </h2>
         </div>
 
@@ -49,13 +50,22 @@ const AvatarsSection = () => {
           {avatars.map((avatar, index) => (
             <motion.div
               key={avatar.name}
-              className={`${avatar.bgColor} rounded-2xl overflow-hidden flex flex-col items-center pt-5 sm:pt-6 pb-5 sm:pb-6 px-4 cursor-pointer`}
+              className={`${avatar.bgColor} relative rounded-2xl overflow-hidden flex flex-col items-center pt-5 sm:pt-6 pb-5 sm:pb-6 px-4 cursor-pointer`}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-30px' }}
               transition={{ duration: 0.4, delay: index * 0.15 }}
               whileHover={{ scale: 1.03 }}
             >
+              {/* Anillo IA: se enciende una sola vez al entrar en pantalla */}
+              <motion.span
+                aria-hidden="true"
+                className="ai-ring"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: [0, 1, 0] }}
+                viewport={{ once: true, margin: '-30px' }}
+                transition={{ duration: 1.4, delay: 0.3 + index * 0.15, times: [0, 0.35, 1] }}
+              />
               {/* Avatar image */}
               <div className="w-full flex justify-center mb-3 sm:mb-4">
                 <img
@@ -78,6 +88,8 @@ const AvatarsSection = () => {
             </motion.div>
           ))}
         </div>
+
+        <ExampleChat agent="ZAHIA" className="mt-10 sm:mt-12" />
       </div>
     </section>
   );

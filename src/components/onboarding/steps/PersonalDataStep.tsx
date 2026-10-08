@@ -159,7 +159,7 @@ export const PersonalDataStep = () => {
                     <span className="flex items-center gap-2">
                       {sport.label}
                       {!sport.available && (
-                        <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                        <span className="text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                           próximamente
                         </span>
                       )}

@@ -6,6 +6,10 @@ import {
 import type { UserRole } from '@/contexts/AuthContext';
 import { loaders } from '@/routes/lazyPages';
 
+/** En mobile, la conversación del chat ocupa toda la pantalla (sin barra inferior). */
+export const isChatConversation = (pathname: string, search: string) =>
+  pathname === '/chat' && new URLSearchParams(search).has('agente');
+
 export interface NavItem {
   label: string;
   icon: LucideIcon;

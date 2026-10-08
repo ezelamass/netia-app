@@ -1,14 +1,18 @@
 import { useTheme } from "next-themes";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { Toaster as Sonner, toast } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
+  // Entra desde abajo en mobile y desde la derecha en desktop.
+  const isDesktop = useMediaQuery("(min-width: 640px)");
 
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
+      position={isDesktop ? "bottom-right" : "bottom-center"}
       className="toaster group"
       toastOptions={{
         classNames: {

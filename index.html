@@ -32,7 +32,7 @@
     <meta name="author" content="NETIA" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
     <meta property="og:title" content="NETIA · Software para gestión de clubes y asociaciones deportivas" />
     <meta property="og:description" content="Socios, cuotas, aptos médicos, asistencia y comunicación con las familias en un solo lugar. Probá la demo sin registrarte." />
@@ -45,9 +45,25 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@NETIA" />
     <meta name="twitter:image" content="/og-image.png" />
+    <style>
+      #splash{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;background:#fff;transition:opacity .15s linear}
+      .dark #splash{background:#0d1017}
+      #splash img{width:96px;height:96px;object-fit:contain}
+      #splash .d{display:flex;gap:8px;align-items:flex-end}
+      #splash .d i{display:block;width:10px;height:10px;border-radius:50%;animation:splash-hop .9s ease-in-out infinite}
+      #splash .d i:nth-child(1){background:#0056b3}
+      #splash .d i:nth-child(2){background:#00c896;animation-delay:.15s}
+      #splash .d i:nth-child(3){background:#7a5af5;animation-delay:.3s}
+      @keyframes splash-hop{0%,70%,100%{transform:translateY(0)}35%{transform:translateY(-8px)}}
+      @media (prefers-reduced-motion:reduce){#splash .d i{animation:none}}
+    </style>
   </head>
 
   <body>
+    <div id="splash" role="status" aria-label="Cargando NETIA">
+      <img src="/apple-touch-icon.png" alt="NETIA" width="96" height="96" />
+      <div class="d" aria-hidden="true"><i></i><i></i><i></i></div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

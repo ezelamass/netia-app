@@ -1,7 +1,9 @@
+import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Edit2, Save, X, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { SavedCheck, useFlash } from '@/components/ui/feedback';
 import { cn } from '@/lib/utils';
 import { ProfileAvatar } from './ProfileAvatar';
 import { UserProfile, SPORTS, LEVELS, COUNTRIES } from '@/types/profile';
@@ -28,6 +30,13 @@ export const ProfileHeader = ({
   onAvatarChange,
 }: ProfileHeaderProps) => {
   const navigate = useNavigate();
+  // Guardado confirmado (CMP-03): cuando termina de guardar, un check dibujado junto al botón.
+  const [justSaved, flashSaved] = useFlash(1500);
+  const wasSaving = useRef(false);
+  useEffect(() => {
+    if (wasSaving.current && !isSaving) flashSaved();
+    wasSaving.current = isSaving;
+  }, [isSaving, flashSaved]);
 
   const sportLabel = SPORTS.find(s => s.value === profile.sport)?.label || profile.sport;
   const levelLabel = LEVELS.find(l => l.value === profile.level)?.label || profile.level;
@@ -88,15 +97,23 @@ export const ProfileHeader = ({
             </Button>
           </div>
         ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onEdit}
-            className="gap-2"
-          >
-            <Edit2 className="w-4 h-4" />
-            Editar
-          </Button>
+          <div className="flex items-center gap-3">
+            {justSaved && (
+              <span className="flex items-center gap-1 text-sm font-medium text-success animate-fade-up" role="status">
+                <SavedCheck />
+                Guardado
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onEdit}
+              className="gap-2"
+            >
+              <Edit2 className="w-4 h-4" />
+              Editar
+            </Button>
+          </div>
         )}
       </div>
 

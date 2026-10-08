@@ -61,7 +61,7 @@ export const NotificationBell = () => {
           <span
             className={cn(
               "animate-in zoom-in-50 duration-150 motion-reduce:animate-none absolute flex items-center justify-center",
-              "min-w-[18px] h-[18px] px-1 text-[10px] font-bold",
+              "min-w-[18px] h-[18px] px-1 text-xs font-bold",
               "bg-destructive text-destructive-foreground rounded-full",
               "-top-0.5 -right-0.5"
             )}

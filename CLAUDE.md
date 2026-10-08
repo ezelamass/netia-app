@@ -49,6 +49,7 @@ src/
 ├── components/       # Reusable components organized by domain
 │   ├── ui/           # shadcn/ui base components (30+)
 │   ├── admin/        # Admin panel components
+│   ├── ai/           # Marca y piezas de la IA (AIMark, AIBadge, AIStages…)
 │   ├── avatars/      # 3D avatar scenes & particles
 │   ├── chat/         # AI chat interface
 │   ├── club/         # Club management
@@ -145,7 +146,11 @@ Supabase DB ↔ Custom Hooks (useX) ↔ React Context (Auth, Onboarding)
 - **Avatar System**: 3 AI avatars — TINO (training), ZAHIA (nutrition/wellness), ROMA (mental/motivation)
 - **Gamification**: XP system with levels (bronze: 0, silver: 500, gold: 2000, elite: 5000), streaks, badges
 - **Design System**: NETIA brand colors via CSS variables (Primary: #007BFF, Secondary: #FF6F3C)
-- **Fonts**: Inter (body), Poppins (headings), Nunito Sans (AI components)
+- **Fonts**: Inter (body y chat), Poppins (solo títulos). Nunito Sans se sacó.
+- **IA**: la señal exclusiva de la IA es el gradiente del equipo (`bg-ai`), siempre como trazo (nunca fondo). Componentes en `src/components/ai` (`AIMark`, `AIBadge`, `AISuggestionActions`, `AIStages`, `AIShimmerText`); `AgentAvatar` tiene `state` (`idle`/`thinking`/`unread`). Todo lo que escribe la IA va firmado y se puede descartar.
+- **Criterio visual**: sin bordes de acento de color, sin tamaños de texto arbitrarios ni colores hardcodeados. Se chequea con `npm run lint:ui`.
+- **Movimiento**: tokens `--dur-*`/`--ease-*`, animaciones en CSS (sin framer-motion en la app), `prefers-reduced-motion` global. Guía completa en `/sistema-de-diseno`.
+- **Chat**: estilo WhatsApp (lista de chats → conversación en mobile, dos paneles en desktop).
 - **Component pattern**: shadcn/ui base → composed domain components → page components
 - **Utility**: `cn()` from `src/lib/utils.ts` for conditional Tailwind classes
 
@@ -157,6 +162,7 @@ Supabase DB ↔ Custom Hooks (useX) ↔ React Context (Auth, Onboarding)
 npm run dev       # Start dev server
 npm run build     # Production build
 npm run lint      # ESLint check
+npm run lint:ui   # Criterio visual (bordes de acento, tamaños y colores prohibidos)
 npm run preview   # Preview production build
 ```
 

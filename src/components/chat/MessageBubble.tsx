@@ -1,46 +1,51 @@
 import { memo } from 'react';
+import { format } from 'date-fns';
+import { Check, CheckCheck, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { AvatarId } from '@/lib/avatars';
-import { AgentAvatar } from '@/components/play/AgentAvatar';
+import type { ChatMessage } from '@/hooks/useChat';
 
 interface MessageBubbleProps {
   isUser: boolean;
-  avatar: AvatarId;
   text: string;
-  /** Primera burbuja de un grupo consecutivo: lleva el avatar del agente */
+  /** Primera burbuja de un grupo: lleva la cola */
   first: boolean;
+  /** ISO del mensaje; sin hora no se muestra (ej. saludo inicial) */
+  timestamp?: string;
+  status?: ChatMessage['status'];
   /** Solo los mensajes nuevos se animan al entrar */
   fresh?: boolean;
+  className?: string;
 }
 
-const AGENT_BORDER: Record<AvatarId, string> = {
-  TINO: 'border-l-tino',
-  ZAHIA: 'border-l-zahia',
-  ROMA: 'border-l-roma',
+const Ticks = ({ status }: { status: NonNullable<ChatMessage['status']> }) => {
+  if (status === 'sending') return <Clock className="h-3 w-3" aria-label="Enviando" />;
+  if (status === 'sent') return <Check className="h-3.5 w-3.5" aria-label="Enviado" />;
+  return <CheckCheck className="h-3.5 w-3.5 text-info" aria-label="Respondido" />;
 };
 
-export const MessageBubble = memo(({ isUser, avatar, text, first, fresh }: MessageBubbleProps) => (
-  <div
-    className={cn(
-      'flex items-end gap-2',
-      isUser ? 'justify-end' : 'justify-start',
-      fresh && 'animate-in fade-in slide-in-from-bottom-1 duration-200 motion-reduce:animate-none',
-    )}
-  >
-    {!isUser && (
-      <span className="w-6 shrink-0 self-start">
-        {first && <AgentAvatar agent={avatar} size={24} />}
-      </span>
-    )}
+/** Burbuja estilo WhatsApp: sin bordes, hora adentro, cola solo en la primera del grupo. */
+export const MessageBubble = memo(({ isUser, text, first, timestamp, status, fresh, className }: MessageBubbleProps) => (
+  <div className={cn('flex', isUser ? 'justify-end' : 'justify-start', className)}>
     <div
       className={cn(
-        'max-w-[80%] px-3.5 py-2 text-sm',
-        isUser
-          ? 'rounded-2xl rounded-br-md bg-primary text-primary-foreground'
-          : cn('rounded-2xl rounded-bl-md border border-l-[3px] border-border/60 bg-card text-card-foreground shadow-sm', AGENT_BORDER[avatar]),
+        'relative max-w-[80%] rounded-lg px-2.5 py-1.5 text-sm text-foreground shadow-bubble lg:max-w-[65%]',
+        isUser ? 'bg-chat-out' : 'bg-card',
+        first && 'bubble-tail',
+        first && (isUser ? 'bubble-tail-out rounded-tr-none' : 'bubble-tail-in rounded-tl-none'),
+        fresh && (isUser ? 'animate-bubble-in-right' : 'animate-bubble-in-left'),
       )}
     >
-      <p className="whitespace-pre-wrap break-words font-ai text-sm leading-relaxed">{text}</p>
+      <p className="whitespace-pre-wrap break-words leading-relaxed">
+        {text}
+        {/* reserva el lugar de la hora al final del último renglón */}
+        {timestamp && <span aria-hidden="true" className={cn('inline-block', isUser ? 'w-16' : 'w-11')} />}
+      </p>
+      {timestamp && (
+        <span className="absolute bottom-1 right-2 flex items-center gap-1 text-xs tabular-nums text-muted-foreground">
+          <time dateTime={timestamp}>{format(new Date(timestamp), 'HH:mm')}</time>
+          {isUser && status && <Ticks status={status} />}
+        </span>
+      )}
     </div>
   </div>
 ));

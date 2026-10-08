@@ -59,7 +59,7 @@ export const MedicalClearanceStatus = ({ userId }: Props) => {
                 <div key={c.id} className="flex items-center gap-2 text-xs border rounded p-2">
                   <FileText className="h-3 w-3 text-muted-foreground" />
                   <span>{format(c.issuedDate, "d MMM yyyy", { locale: es })}</span>
-                  <Badge variant={statusConfig[c.status].variant} className="text-[10px] px-1.5 py-0">
+                  <Badge variant={statusConfig[c.status].variant} className="text-xs px-1.5 py-0">
                     {statusConfig[c.status].label}
                   </Badge>
                 </div>

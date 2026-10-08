@@ -5,6 +5,7 @@ import confetti from 'canvas-confetti';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { SavedCheck, XpFloat } from '@/components/ui/feedback';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -50,6 +51,7 @@ export const DailyLogSheet = ({ open, onClose, onSave, initialStep = 0 }: DailyL
     painLocation: '',
   });
   const [showCelebration, setShowCelebration] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const handleNext = () => {
     haptic('light');
@@ -143,6 +145,7 @@ export const DailyLogSheet = ({ open, onClose, onSave, initialStep = 0 }: DailyL
     } else {
       haptic('success');
       onSave(data);
+      setSaved(true);
       
       // Show contextual message
       if (data.sleep < 7) {
@@ -154,9 +157,13 @@ export const DailyLogSheet = ({ open, onClose, onSave, initialStep = 0 }: DailyL
       } else {
         toast.success('+10 XP por completar tu registro!');
       }
-      
-      onClose();
-      setStep(0);
+
+      // Confirmación en el botón (check + XP) antes de cerrar.
+      setTimeout(() => {
+        setSaved(false);
+        onClose();
+        setStep(0);
+      }, 900);
     }
   };
 
@@ -290,7 +297,7 @@ export const DailyLogSheet = ({ open, onClose, onSave, initialStep = 0 }: DailyL
                       )}
                     >
                       <span className="text-3xl mb-1">{option.emoji}</span>
-                      <span className="text-[10px] text-muted-foreground">{option.label}</span>
+                      <span className="text-xs text-muted-foreground">{option.label}</span>
                     </button>
                   ))}
                 </div>
@@ -345,9 +352,19 @@ export const DailyLogSheet = ({ open, onClose, onSave, initialStep = 0 }: DailyL
               Anterior
             </Button>
           )}
-          <Button onClick={handleNext} className="flex-1">
-            {step === STEPS.length - 1 ? 'Guardar' : 'Siguiente'}
-            {step < STEPS.length - 1 && <ChevronRight className="w-4 h-4 ml-1" />}
+          <Button onClick={handleNext} disabled={saved} className="relative flex-1 disabled:opacity-100">
+            {saved ? (
+              <>
+                <SavedCheck />
+                Guardado
+                <XpFloat amount={10} />
+              </>
+            ) : (
+              <>
+                {step === STEPS.length - 1 ? 'Guardar' : 'Siguiente'}
+                {step < STEPS.length - 1 && <ChevronRight className="w-4 h-4 ml-1" />}
+              </>
+            )}
           </Button>
         </div>
       )}

@@ -38,6 +38,9 @@ const HeroSection = ({ onDemoClick }: HeroSectionProps) => {
               </span>{' '}
               de 8 a 16 años
             </h1>
+            <p className="-mt-4 mb-8 text-lg text-muted-foreground">
+              Con tres asistentes de <span className="bg-ai bg-clip-text font-semibold text-transparent">IA</span> que entrenan, cuidan y motivan a cada chico.
+            </p>
 
             {/* CTAs */}
             <div className="flex flex-wrap items-center gap-4">

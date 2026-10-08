@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { AIMark } from '@/components/ai';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -7,7 +8,6 @@ import {
   Palette,
   Globe,
   Lock,
-  Bot,
   Database,
   Info,
   LogOut,
@@ -313,7 +313,7 @@ const Settings = () => {
           </SettingsSection>
 
           {/* AI Avatars */}
-          <SettingsSection icon={Bot} title="Avatares IA">
+          <SettingsSection icon={AIMark} title="Avatares IA">
             <SettingsRow
               type="select"
               label="Avatar principal"

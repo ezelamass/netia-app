@@ -1,7 +1,13 @@
 import { Skeleton } from '@/components/ui/skeleton';
+import { useDelayedFlag } from '@/hooks/useDelayedFlag';
 
-export const PageSkeleton = () => (
-  <div className="space-y-6" role="status" aria-label="Cargando">
+/** Se muestra solo si la carga pasa 150 ms (EST-04): sin parpadeo en cargas rápidas. */
+export const PageSkeleton = ({ message }: { message?: string }) => {
+  const show = useDelayedFlag(true, 150, 0);
+  if (!show) return null;
+  return (
+  <div className="space-y-6" role="status" aria-label={message ?? 'Cargando'}>
+    {message && <p className="text-sm text-muted-foreground">{message}</p>}
     <div className="space-y-2">
       <Skeleton className="h-7 w-56" />
       <Skeleton className="h-4 w-80 max-w-full" />
@@ -13,4 +19,5 @@ export const PageSkeleton = () => (
     </div>
     <Skeleton className="h-64 rounded-lg" />
   </div>
-);
+  );
+};

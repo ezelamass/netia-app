@@ -43,7 +43,7 @@ export function LessonContent({ content }: LessonContentProps) {
             <ol key={blockIdx} className="space-y-1.5 pl-1">
               {lines.map((line, i) => (
                 <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/85 leading-relaxed">
-                  <span className="mt-0.5 flex items-center justify-center h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold shrink-0">
+                  <span className="mt-0.5 flex items-center justify-center h-5 w-5 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">
                     {i + 1}
                   </span>
                   <span>{renderInline(line.replace(/^\d+[\.\)]\s*/, ''))}</span>
@@ -82,7 +82,7 @@ export function LessonContent({ content }: LessonContentProps) {
                   const num = trimmed.match(/^(\d+)/)?.[1] || '1';
                   return (
                     <div key={i} className="flex items-start gap-2.5 text-sm text-foreground/85 leading-relaxed pl-1">
-                      <span className="mt-0.5 flex items-center justify-center h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold shrink-0">
+                      <span className="mt-0.5 flex items-center justify-center h-5 w-5 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">
                         {num}
                       </span>
                       <span>{renderInline(trimmed.replace(/^\d+[\.\)]\s*/, ''))}</span>

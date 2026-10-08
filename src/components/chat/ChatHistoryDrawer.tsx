@@ -94,7 +94,7 @@ export const ChatHistoryDrawer = ({
                     <p className="text-xs font-medium truncate leading-snug">
                       {convo.title ?? `Chat con ${convo.avatar}`}
                     </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {convo.lastMessageAt
                         ? formatDistanceToNow(new Date(convo.lastMessageAt), { addSuffix: true, locale: es })
                         : formatDistanceToNow(new Date(convo.createdAt), { addSuffix: true, locale: es })}

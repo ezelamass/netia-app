@@ -209,6 +209,9 @@ export function useTrainingPlan() {
   /** Marca la sesión como hecha con el RPE que contó el chico y suma XP. */
   const completeSession = useCallback(async (sessionId: string, rpe: number) => {
     if (!user?.id) return false;
+    // Una sesión ya completada no vuelve a sumar XP.
+    const cached = qc.getQueryData<TrainingPlan | null>(['training-plan', user.id]);
+    if (cached?.weekSessions.some((s) => s.id === sessionId && s.status === 'completed')) return false;
     const { error } = await supabase
       .from('training_plan_sessions')
       .update({ status: 'completed', rpe })

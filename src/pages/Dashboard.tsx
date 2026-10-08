@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { addDays, format, isAfter, isSameDay, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
@@ -10,6 +10,8 @@ import { XpCard } from '@/components/dashboard/XpCard';
 import { HowYouAreCard } from '@/components/dashboard/HowYouAreCard';
 import { SectionHeader } from '@/components/play/SectionHeader';
 import { StatPill } from '@/components/play/StatPill';
+import { CountUp } from '@/components/play/CountUp';
+import { staggerProps, useEnterOnce } from '@/hooks/useEnterOnce';
 import { WeekStrip } from '@/components/play/WeekStrip';
 import { PageSkeleton } from '@/components/skeletons/PageSkeleton';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,6 +36,11 @@ const Dashboard = () => {
   const today = new Date();
   const name = (profile?.fullName ?? user?.name ?? '').split(' ')[0] || 'Deportista';
   const streak = Math.max(getStreak(), stats?.streak ?? 0);
+  const prevStreak = useRef(streak);
+  const streakUp = streak > prevStreak.current;
+  useEffect(() => { prevStreak.current = streak; }, [streak]);
+  const enter = useEnterOnce('dashboard');
+  const st = (i: number) => staggerProps(enter, i);
   // La fuente de verdad del XP es player_stats; si todavía no hay fila, se usa el cálculo local.
   const currentXP = Math.max(stats?.xp ?? 0, computedXP);
   const currentLevel = calculateLevel(currentXP);
@@ -88,13 +95,22 @@ const Dashboard = () => {
             <p className="text-sm text-muted-foreground first-letter:uppercase">{format(today, "EEEE d 'de' MMMM", { locale: es })}</p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end">
-            {streak > 0 && <StatPill icon={ICONS.streak.icon} value={`${streak} ${streak === 1 ? 'día' : 'días'}`} label="Racha" tone="orange" />}
-            <StatPill icon={ICONS.xp.icon} value={`${LEVEL_CONFIG[currentLevel].label} · ${currentXP} XP`} label="Nivel" tone="orange" />
+            {streak > 0 && (
+              <StatPill
+                key={streak}
+                icon={ICONS.streak.icon}
+                value={<><CountUp value={streak} id="streak" /> {streak === 1 ? 'día' : 'días'}</>}
+                label="Racha"
+                tone="orange"
+                celebrate={streakUp}
+              />
+            )}
+            <StatPill icon={ICONS.xp.icon} value={<>{LEVEL_CONFIG[currentLevel].label} · <CountUp value={currentXP} id="xp" /> XP</>} label="Nivel" tone="orange" />
           </div>
         </header>
 
         <div className="space-y-5 lg:col-span-8">
-          <TodayCard todayEvents={todayEvents} />
+          <div {...st(0)}><TodayCard todayEvents={todayEvents} /></div>
 
           <section>
             <SectionHeader title="Tu equipo" />
@@ -106,7 +122,7 @@ const Dashboard = () => {
             />
           </section>
 
-          <section>
+          <section {...st(2)}>
             <SectionHeader title="Tu semana" action={{ label: 'Ver calendario', to: '/calendar' }} />
             <div className="rounded-2xl border border-border/60 bg-card p-2 shadow-card">
               <WeekStrip weekStart={weekStart} selected={today} dotsByDay={dotsByDay} readOnly />
@@ -115,12 +131,12 @@ const Dashboard = () => {
         </div>
 
         <aside className="space-y-5 lg:col-span-4">
-          <section>
+          <section {...st(3)}>
             <SectionHeader title="Mi club" />
             <ClubCard enrollment={enrollment} nextClubEvent={nextClubEvent} lastAnnouncement={lastAnnouncement} />
           </section>
 
-          <section>
+          <section {...st(4)}>
             <SectionHeader title="Progreso" action={{ label: 'Ver logros', to: '/achievements' }} />
             <XpCard level={currentLevel} xp={currentXP} nextLevelXP={nextLevelXP} progress={levelProgress} badges={lastBadges} />
           </section>

@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { motion } from 'framer-motion';
-import { Brain, Target, Sparkles } from 'lucide-react';
+import { Brain, Target } from 'lucide-react';
 
 const motivationLevels = [
   { value: 1, emoji: '😔', label: 'Muy bajo' },
@@ -60,7 +60,7 @@ export const MentalProfileStep = () => {
           {/* Motivation Level */}
           <div className="space-y-3">
             <Label className="flex items-center gap-2 text-sm font-medium">
-              <Sparkles className="w-4 h-4 text-[hsl(257,89%,62%)]" />
+              <Brain className="w-4 h-4 text-roma" />
               ¿Cómo está tu motivación ahora?
             </Label>
             <div className="flex gap-2 justify-center">
@@ -71,12 +71,12 @@ export const MentalProfileStep = () => {
                   onClick={() => updateData({ motivationLevel: level.value })}
                   className={`flex flex-col items-center p-3 rounded-xl transition-all ${
                     data.motivationLevel === level.value
-                      ? 'bg-[hsl(257,89%,62%)] text-white scale-110'
+                      ? 'bg-roma text-white scale-110'
                       : 'bg-muted text-muted-foreground hover:bg-muted/80'
                   }`}
                 >
                   <span className="text-2xl">{level.emoji}</span>
-                  <span className="text-[10px] mt-1 font-medium">{level.label}</span>
+                  <span className="text-xs mt-1 font-medium">{level.label}</span>
                 </button>
               ))}
             </div>
@@ -85,7 +85,7 @@ export const MentalProfileStep = () => {
           {/* Pre-Competition Feeling */}
           <div className="space-y-3">
             <Label className="flex items-center gap-2 text-sm font-medium">
-              <Brain className="w-4 h-4 text-[hsl(257,89%,62%)]" />
+              <Brain className="w-4 h-4 text-roma" />
               Antes de competir, ¿cómo te sentís?
             </Label>
             <RadioGroup
@@ -99,8 +99,8 @@ export const MentalProfileStep = () => {
                   htmlFor={`feeling-${feeling.value}`}
                   className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                     data.preCompetitionFeeling === feeling.value
-                      ? 'border-[hsl(257,89%,62%)] bg-[hsl(257,89%,62%)]/10'
-                      : 'border-border hover:border-[hsl(257,89%,62%)]/50'
+                      ? 'border-roma bg-roma/10'
+                      : 'border-border hover:border-roma/50'
                   }`}
                 >
                   <RadioGroupItem value={feeling.value} id={`feeling-${feeling.value}`} className="sr-only" />
@@ -114,7 +114,7 @@ export const MentalProfileStep = () => {
           {/* Concentration Helpers */}
           <div className="space-y-3">
             <Label className="flex items-center gap-2 text-sm font-medium">
-              <Target className="w-4 h-4 text-[hsl(257,89%,62%)]" />
+              <Target className="w-4 h-4 text-roma" />
               ¿Qué te ayuda a concentrarte?
             </Label>
             <div className="flex flex-wrap gap-2">
@@ -125,7 +125,7 @@ export const MentalProfileStep = () => {
                   onClick={() => toggleHelper(helper.value)}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                     data.concentrationHelpers?.includes(helper.value)
-                      ? 'bg-[hsl(257,89%,62%)] text-white'
+                      ? 'bg-roma text-white'
                       : 'bg-muted text-muted-foreground hover:bg-muted/80'
                   }`}
                 >
@@ -136,7 +136,7 @@ export const MentalProfileStep = () => {
           </div>
 
           {/* Post Training Relaxation */}
-          <div className="flex items-center justify-between p-4 rounded-xl bg-[hsl(257,89%,62%)]/10 border border-[hsl(257,89%,62%)]/20">
+          <div className="flex items-center justify-between p-4 rounded-xl bg-roma/10 border border-roma/20">
             <div className="flex items-center gap-3">
               <span className="text-2xl">🧘</span>
               <div>

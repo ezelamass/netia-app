@@ -17,9 +17,9 @@ const avatarImages: Record<AvatarType, string> = {
 };
 
 const avatarColors: Record<AvatarType, string> = {
-  tino: 'from-[hsl(211,100%,35%)] to-[hsl(211,100%,50%)]',
-  zahia: 'from-[hsl(162,100%,39%)] to-[hsl(162,100%,50%)]',
-  roma: 'from-[hsl(257,89%,62%)] to-[hsl(280,89%,70%)]',
+  tino: 'from-tino to-tino/80',
+  zahia: 'from-zahia to-zahia/80',
+  roma: 'from-roma to-roma/80',
 };
 
 const avatarNames: Record<AvatarType, string> = {
@@ -80,7 +80,7 @@ export const AvatarGuide = ({ avatar, message, className }: AvatarGuideProps) =>
         {/* Avatar name tag */}
         <span
           className={cn(
-            'absolute -top-2 left-2 px-2 py-0.5 text-[10px] font-bold text-white rounded-full bg-gradient-to-r',
+            'absolute -top-2 left-2 px-2 py-0.5 text-xs font-bold text-white rounded-full bg-gradient-to-r',
             avatarColors[avatar]
           )}
         >

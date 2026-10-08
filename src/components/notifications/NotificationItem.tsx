@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion';
-import { Trash2, Check, MoreHorizontal } from 'lucide-react';
+import { Trash2, Check, MoreHorizontal, TriangleAlert, Bell, Trophy, MessageCircle, Flame, Info, Flag, type LucideIcon } from 'lucide-react';
+import { IconBadge } from '@/components/play/IconBadge';
+import type { Tone } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import {
   Notification,
-  NOTIFICATION_CONFIG,
-  AVATAR_COLORS,
+  NotificationType,
   formatRelativeTime,
 } from '@/types/notification';
 import {
@@ -15,6 +16,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+
+/** El tipo se comunica con un ícono en su tono, no con bordes de color. */
+const TYPE_ICON: Record<NotificationType, { icon: LucideIcon; tone: Tone }> = {
+  health_alert: { icon: TriangleAlert, tone: 'warning' },
+  reminder: { icon: Bell, tone: 'blue' },
+  achievement: { icon: Trophy, tone: 'orange' },
+  ai_message: { icon: MessageCircle, tone: 'tino' },
+  streak: { icon: Flame, tone: 'orange' },
+  info: { icon: Info, tone: 'slate' },
+  tournament: { icon: Flag, tone: 'zahia' },
+};
 
 interface NotificationItemProps {
   notification: Notification;
@@ -30,12 +42,7 @@ export const NotificationItem = ({
   onClose,
 }: NotificationItemProps) => {
   const navigate = useNavigate();
-  const config = NOTIFICATION_CONFIG[notification.type];
-  
-  // Use avatar color for AI messages
-  const borderColor = notification.type === 'ai_message' && notification.avatar
-    ? AVATAR_COLORS[notification.avatar]
-    : config.borderColor;
+  const typeIcon = TYPE_ICON[notification.type];
 
   const handleClick = () => {
     // Mark as read
@@ -56,8 +63,7 @@ export const NotificationItem = ({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -10, height: 0 }}
       className={cn(
-        "group flex items-start gap-3 p-3 rounded-lg border-l-4 cursor-pointer transition-colors",
-        borderColor,
+        "group flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors",
         notification.isRead
           ? "bg-background hover:bg-muted/50"
           : "bg-muted/30 hover:bg-muted/50"
@@ -74,7 +80,7 @@ export const NotificationItem = ({
       </div>
 
       {/* Icon */}
-      <span className="text-lg flex-shrink-0">{config.icon}</span>
+      <IconBadge icon={typeIcon.icon} tone={typeIcon.tone} />
 
       {/* Content */}
       <div className="flex-1 min-w-0">

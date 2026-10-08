@@ -1,4 +1,4 @@
-import { Sparkles } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { useDemo } from '@/contexts/DemoContext';
 import { cn } from '@/lib/utils';
 
@@ -9,11 +9,11 @@ export const PreviewBadge = ({ className }: { className?: string }) => {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-semibold text-primary',
+        'inline-flex items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary',
         className,
       )}
     >
-      <Sparkles className="h-3 w-3" aria-hidden="true" />
+      <Eye className="h-3 w-3" aria-hidden="true" />
       Vista previa
     </span>
   );

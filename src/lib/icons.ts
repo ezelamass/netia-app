@@ -32,7 +32,7 @@ export type IconKey = keyof typeof ICONS;
 export const TONE_CLASSES: Record<Tone, { bg: string; text: string }> = {
   orange: { bg: 'bg-primary-soft', text: 'text-primary' },
   tino: { bg: 'bg-tino-soft', text: 'text-tino' },
-  zahia: { bg: 'bg-zahia-soft', text: 'text-[hsl(162_100%_24%)] dark:text-zahia' },
+  zahia: { bg: 'bg-zahia-soft', text: 'text-zahia-text' },
   roma: { bg: 'bg-roma-soft', text: 'text-roma' },
   blue: { bg: 'bg-info-soft', text: 'text-info' },
   slate: { bg: 'bg-slate-soft', text: 'text-muted-foreground' },
