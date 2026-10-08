@@ -1,94 +1,57 @@
-import { useDemo, DEMO_ROLES } from '@/contexts/DemoContext';
+import { ChevronDown, Check, Footprints, RotateCcw, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Gamepad2, ChevronDown, X, Check, UserPlus } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { useDemo, DEMO_ROLES } from '@/contexts/DemoContext';
+import { demoUi } from '@/demo/ui';
 
+/** Banner fino de la demo. Se oculta en modo presentación (?modo=presentacion). */
 export function DemoBanner() {
-  const { isDemoMode, demoRole, switchDemoRole, exitDemo } = useDemo();
-  const navigate = useNavigate();
+  const { isDemoMode, presentation, demoRole, switchDemoRole, resetDemo, exitDemo } = useDemo();
+  if (!isDemoMode || presentation) return null;
 
-  if (!isDemoMode) return null;
-
-  const currentLabel = DEMO_ROLES.find(r => r.role === demoRole)?.label || 'Demo';
-
-  const handleRegister = async () => {
-    await exitDemo();
-    navigate('/register');
-  };
-
-  const handleSwitch = async (role: typeof DEMO_ROLES[number]['role']) => {
-    const result = await switchDemoRole(role);
-    if (!result.ok) {
-      toast.error('No pudimos cambiar de rol', { description: result.error });
-    }
-  };
+  const current = DEMO_ROLES.find((r) => r.role === demoRole);
 
   return (
-    <motion.div
-      initial={{ y: -40 }}
-      animate={{ y: 0 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed top-0 left-0 right-0 z-[60] h-10 bg-gradient-to-r from-[#FF6B35] via-primary to-[#1C274C]"
-    >
-      <div className="h-full flex items-center justify-between px-4 max-w-screen-2xl mx-auto">
-        {/* Left */}
-        <div className="flex items-center gap-2">
-          <Gamepad2 className="w-4 h-4 text-white" />
-          <span className="text-white text-xs font-bold uppercase tracking-wider hidden sm:inline">
-            Modo Demo
-          </span>
-        </div>
+    <div className="no-print fixed top-0 left-0 right-0 z-[60] h-10 bg-foreground text-background" role="region" aria-label="Demo">
+      <div className="mx-auto flex h-full max-w-screen-2xl items-center justify-between gap-2 px-3 sm:px-4">
+        <p className="truncate text-xs">
+          <span className="font-semibold">Demo</span>
+          <span className="hidden sm:inline"> · datos de ejemplo</span>
+        </p>
 
-        {/* Center: Role switcher */}
-        <div className="flex items-center gap-2">
-          <span className="text-white/70 text-xs hidden sm:inline">Viendo como:</span>
+        <div className="flex items-center gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 text-white hover:bg-white/20 hover:text-white gap-1 text-xs font-semibold">
-                {currentLabel}
-                <ChevronDown className="w-3 h-3" />
+              <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs text-background hover:bg-background/15 hover:text-background">
+                <span className="hidden sm:inline">Vista:</span> {current?.label ?? 'Elegir'}
+                <ChevronDown className="h-3 w-3" aria-hidden="true" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="center">
-              {DEMO_ROLES.map(role => (
-                <DropdownMenuItem
-                  key={role.role}
-                  onClick={() => handleSwitch(role.role)}
-                  className="gap-2"
-                >
-                  {role.role === demoRole && <Check className="w-3.5 h-3.5" />}
-                  {role.role !== demoRole && <span className="w-3.5" />}
-                  {role.label}
+            <DropdownMenuContent align="end">
+              {DEMO_ROLES.map((r) => (
+                <DropdownMenuItem key={r.role} onClick={() => switchDemoRole(r.role)} className="gap-2">
+                  {r.role === demoRole ? <Check className="h-3.5 w-3.5" /> : <span className="w-3.5" />}
+                  {r.label}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
 
-        {/* Right */}
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-white hover:bg-white/20 hover:text-white text-xs gap-1 hidden sm:flex"
-            onClick={handleRegister}
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            Registrate gratis
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-background hover:bg-background/15 hover:text-background" onClick={() => demoUi.startTour()} aria-label="Recorrido guiado">
+            <Footprints className="h-3.5 w-3.5 sm:mr-1" aria-hidden="true" /><span className="hidden sm:inline">Recorrido</span>
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-white hover:bg-white/20 hover:text-white"
-            onClick={exitDemo}
-          >
-            <X className="w-4 h-4" />
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-background hover:bg-background/15 hover:text-background" onClick={() => { resetDemo(); toast.success('Demo reiniciada'); }} aria-label="Reiniciar demo">
+            <RotateCcw className="h-3.5 w-3.5 sm:mr-1" aria-hidden="true" /><span className="hidden sm:inline">Reiniciar</span>
+          </Button>
+          <Button size="sm" className="h-7 bg-secondary px-2.5 text-xs font-semibold text-secondary-foreground hover:bg-secondary/90" onClick={() => demoUi.openLead()}>
+            <span className="sm:hidden">Lo quiero</span><span className="hidden sm:inline">Quiero esto para mi club</span>
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-background hover:bg-background/15 hover:text-background" onClick={() => exitDemo()} aria-label="Salir de la demo">
+            <X className="h-4 w-4" />
           </Button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

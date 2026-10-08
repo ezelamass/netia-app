@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import type { UserRole } from "@/contexts/AuthContext";
 import { DemoProvider } from "@/contexts/DemoContext";
@@ -17,6 +17,8 @@ const LandingPage = lazy(() => import("./pages/LandingPage"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Demo = lazy(() => import("./pages/Demo"));
+const DemoEntry = lazy(() => import("./pages/DemoEntry"));
 
 // Student pages
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -38,7 +40,15 @@ const ParentMedical = lazy(() => import("./pages/parent/ParentMedical"));
 
 // Club pages
 const ClubDashboard = lazy(() => import("./pages/club/ClubDashboard"));
-const Roster = lazy(() => import("./pages/club/Roster"));
+const Members = lazy(() => import("./pages/club/Members"));
+const Teams = lazy(() => import("./pages/club/Teams"));
+const Fees = lazy(() => import("./pages/club/Fees"));
+const Medical = lazy(() => import("./pages/club/Medical"));
+const Attendance = lazy(() => import("./pages/club/Attendance"));
+const Fixtures = lazy(() => import("./pages/club/Fixtures"));
+const ClubSetup = lazy(() => import("./pages/club/ClubSetup"));
+const ParentFees = lazy(() => import("./pages/parent/ParentFees"));
+const ParentAnnouncements = lazy(() => import("./pages/parent/ParentAnnouncements"));
 const TrainingLoad = lazy(() => import("./pages/club/TrainingLoad"));
 const Reports = lazy(() => import("./pages/club/Reports"));
 const Communication = lazy(() => import("./pages/club/Communication"));
@@ -82,6 +92,8 @@ const App = () => (
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
+                  <Route path="/demo" element={<Demo />} />
+                  <Route path="/demo/:slug" element={<DemoEntry />} />
                   <Route path="/onboarding" element={guard(ALL, <Onboarding />)} />
                   <Route path="/onboarding-result" element={guard(ALL, <OnboardingResult />)} />
 
@@ -108,10 +120,19 @@ const App = () => (
                     <Route path="/parent/child" element={guard(PARENT, <ParentChild />)} />
                     <Route path="/parent/child/:childId" element={guard(PARENT, <ParentChild />)} />
                     <Route path="/parent/medical" element={guard(PARENT, <ParentMedical />)} />
+                    <Route path="/parent/fees" element={guard(PARENT, <ParentFees />)} />
+                    <Route path="/parent/announcements" element={guard(PARENT, <ParentAnnouncements />)} />
 
                     {/* Club */}
                     <Route path="/club/dashboard" element={guard(CLUB, <ClubDashboard />)} />
-                    <Route path="/club/roster" element={guard(CLUB, <Roster />)} />
+                    <Route path="/club/roster" element={<Navigate to="/club/members" replace />} />
+                    <Route path="/club/members" element={guard(CLUB, <Members />)} />
+                    <Route path="/club/teams" element={guard(CLUB, <Teams />)} />
+                    <Route path="/club/fees" element={guard(CLUB, <Fees />)} />
+                    <Route path="/club/medical" element={guard(CLUB, <Medical />)} />
+                    <Route path="/club/attendance" element={guard(CLUB, <Attendance />)} />
+                    <Route path="/club/fixtures" element={guard(CLUB, <Fixtures />)} />
+                    <Route path="/club/setup" element={guard(CLUB, <ClubSetup />)} />
                     <Route path="/club/reports" element={guard(CLUB, <Reports />)} />
                     <Route path="/club/training-load" element={guard(CLUB, <TrainingLoad />)} />
                     <Route path="/club/communication" element={guard(CLUB, <Communication />)} />

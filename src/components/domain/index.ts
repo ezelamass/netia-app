@@ -6,3 +6,4 @@ export type { Column } from './DataTable';
 export { PageHeader } from './PageHeader';
 export { FilterBar } from './FilterBar';
 export { EmptyPanel } from './EmptyPanel';
+export { SampleDataNotice } from './SampleDataNotice';

@@ -26,7 +26,7 @@ const clubGroups: NavGroup[] = [
       { label: 'Socios y deportistas', short: 'Socios', icon: Users, href: '/club/members' },
       { label: 'Categorías y equipos', short: 'Categorías', icon: Layers, href: '/club/teams' },
       { label: 'Calendario y partidos', short: 'Partidos', icon: Swords, href: '/club/fixtures' },
-      { label: 'Asistencia', icon: ClipboardCheck, href: '/club/attendance' },
+      { label: 'Asistencia', short: 'Asistencia', icon: ClipboardCheck, href: '/club/attendance' },
     ],
   },
   {
@@ -110,8 +110,13 @@ export const footerNav: NavItem[] = [
 /** Hasta 4 ítems principales para la barra inferior; el resto va en "Más". */
 export const getMobileNav = (role?: UserRole) => {
   const flat = getNavGroups(role).flatMap((g) => g.items);
-  const primary = flat.slice(0, 4);
-  const more = flat.slice(4);
+  const preferred = role === 'coach' || role === 'club_admin'
+    ? ['/club/dashboard', '/club/members', '/club/fees', '/club/attendance']
+    : [];
+  const primary = preferred.length
+    ? preferred.map((h) => flat.find((i) => i.href === h)).filter((i): i is NavItem => !!i)
+    : flat.slice(0, 4);
+  const more = flat.filter((i) => !primary.includes(i));
   return { primary, more };
 };
 

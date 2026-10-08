@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './types';
-import { demoMockClient, resetMockDataset } from './demo-mock-client';
+import { demoMockClient } from './demo-mock-client';
+import { isDemoActive } from '@/demo/session';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -13,25 +14,13 @@ const realClient = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY
   },
 });
 
-// Demo mode flag — flipped by DemoContext.demoLogin / exitDemo via setDemoMode().
-// We keep it as a module-level boolean (not React state) so the supabase proxy
-// can consult it synchronously inside .from()/.rpc()/.functions calls.
-let demoModeActive = false;
+/** Cliente real, sin pasar por el proxy de la demo (solo para el formulario de leads). */
+export const realSupabase = realClient as unknown as SupabaseClient<Database>;
 
-export const setDemoMode = (active: boolean) => {
-  if (active === demoModeActive) return;
-  demoModeActive = active;
-  if (!active) resetMockDataset();
-};
-
-export const isDemoModeActive = () => demoModeActive;
-
-// On boot, sync flag with sessionStorage so a page reload during a demo session
-// keeps the mock active without waiting for DemoContext to mount.
-try {
-  const stored = sessionStorage.getItem('netia_demo');
-  if (stored && JSON.parse(stored)?.isDemoMode) demoModeActive = true;
-} catch { /* ignore */ }
+// Modo demo: la sesión vive en src/demo/session.ts (store externo, síncrono).
+// Mientras está activa, los hooks viejos que todavía llaman a supabase.from()
+// leen/escriben contra el mock en memoria: cero requests a Supabase.
+export const isDemoModeActive = () => isDemoActive();
 
 // Proxy that routes table queries / rpc / functions / channels through the mock
 // when demo mode is on. `auth` and other surface always go to the real client
@@ -40,7 +29,7 @@ const ROUTED_PROPS = new Set(['from', 'rpc', 'functions', 'channel', 'removeChan
 
 export const supabase = new Proxy(realClient, {
   get(target, prop, receiver) {
-    if (demoModeActive && typeof prop === 'string' && ROUTED_PROPS.has(prop)) {
+    if (isDemoActive() && typeof prop === 'string' && ROUTED_PROPS.has(prop)) {
       return (demoMockClient as any)[prop];
     }
     return Reflect.get(target, prop, receiver);

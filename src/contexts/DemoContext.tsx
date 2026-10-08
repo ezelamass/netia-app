@@ -1,18 +1,19 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useCallback, useSyncExternalStore, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Users, Building2, Shield, Heart, type LucideIcon } from 'lucide-react';
-import { supabase, setDemoMode } from '@/integrations/supabase/client';
+import { Trophy, Users, Building2, Heart, type LucideIcon } from 'lucide-react';
+import { resetMockDataset } from '@/integrations/supabase/demo-mock-client';
 import type { UserRole } from '@/contexts/AuthContext';
+import { demoSession, type DemoScenario } from '@/demo/session';
+import { clubStore } from '@/demo/store';
 
 /**
- * Single source of truth for demo roles. DemoBanner and DemoRolePickerDialog
- * both consume this list so adding a new role in one place updates the UI
- * everywhere.
+ * Roles de la demo (fuente única para banner y picker).
+ * La demo corre 100% en el navegador: sin cuentas, sin red, sin Supabase Auth.
  */
 export interface DemoRoleConfig {
   role: UserRole;
-  email: string;
-  password: string;
+  /** Segmento de la URL: /demo/<slug> */
+  slug: 'club' | 'entrenador' | 'familia' | 'jugador';
   dashboard: string;
   label: string;
   icon: LucideIcon;
@@ -23,71 +24,52 @@ export interface DemoRoleConfig {
 
 export const DEMO_ROLES: DemoRoleConfig[] = [
   {
-    role: 'player',
-    email: 'demo-jugador@netia.app',
-    password: 'netiademo',
-    dashboard: '/dashboard',
-    label: 'Jugador',
-    icon: Trophy,
-    description: 'Explora tu dashboard, logros, entrenamientos y chatea con tu avatar IA',
+    role: 'club_admin',
+    slug: 'club',
+    dashboard: '/club/dashboard',
+    label: 'Director de club',
+    icon: Building2,
+    description: 'Socios, cuotas, aptos médicos y comunicación de todo el club en un panel.',
     gradient: 'from-blue-500/10 to-cyan-500/10',
-    iconColor: 'text-blue-500',
-  },
-  {
-    role: 'parent',
-    email: 'demo-padre@netia.app',
-    password: 'netiademo',
-    dashboard: '/parent/dashboard',
-    label: 'Familia',
-    icon: Heart,
-    description: 'Seguí el bienestar, entrenamientos y apto médico de tu hijo/a deportista',
-    gradient: 'from-pink-500/10 to-rose-500/10',
-    iconColor: 'text-pink-500',
+    iconColor: 'text-blue-600',
   },
   {
     role: 'coach',
-    email: 'demo-entrenador@netia.app',
-    password: 'netiademo',
+    slug: 'entrenador',
     dashboard: '/club/dashboard',
     label: 'Entrenador',
     icon: Users,
-    description: 'Gestiona tu club, roster de atletas, cargas de entrenamiento e informes',
+    description: 'Tomá lista en segundos y mirá el semáforo de riesgo de tu categoría.',
     gradient: 'from-orange-500/10 to-amber-500/10',
-    iconColor: 'text-orange-500',
+    iconColor: 'text-orange-600',
   },
   {
-    role: 'club_admin',
-    email: 'demo-club-admin@netia.app',
-    password: 'netiademo',
-    dashboard: '/club/dashboard',
-    label: 'Admin de Club',
-    icon: Building2,
-    description: 'Gestión integral del club, equipos y permisos administrativos',
+    role: 'parent',
+    slug: 'familia',
+    dashboard: '/parent/dashboard',
+    label: 'Familia',
+    icon: Heart,
+    description: 'Cuota, apto médico y avisos del club de tu hijo/a, desde el celular.',
+    gradient: 'from-pink-500/10 to-rose-500/10',
+    iconColor: 'text-pink-600',
+  },
+  {
+    role: 'player',
+    slug: 'jugador',
+    dashboard: '/dashboard',
+    label: 'Jugador',
+    icon: Trophy,
+    description: 'Entrenamientos, logros y el asistente IA que te acompaña.',
     gradient: 'from-emerald-500/10 to-teal-500/10',
     iconColor: 'text-emerald-600',
   },
-  {
-    role: 'admin',
-    email: 'demo-admin@netia.app',
-    password: 'netiademo',
-    dashboard: '/admin/dashboard',
-    label: 'Administrador',
-    icon: Shield,
-    description: 'Controla toda la plataforma: usuarios, analíticas y configuración del sistema',
-    gradient: 'from-purple-500/10 to-indigo-500/10',
-    iconColor: 'text-purple-500',
-  },
 ];
 
-const getDemoConfig = (role: UserRole): DemoRoleConfig | undefined =>
+export const getDemoConfig = (role: UserRole): DemoRoleConfig | undefined =>
   DEMO_ROLES.find((r) => r.role === role);
 
-const DEMO_STORAGE_KEY = 'netia_demo';
-
-interface DemoState {
-  isDemoMode: boolean;
-  demoRole: UserRole | null;
-}
+export const getDemoConfigBySlug = (slug?: string): DemoRoleConfig | undefined =>
+  DEMO_ROLES.find((r) => r.slug === slug);
 
 export interface DemoLoginResult {
   ok: boolean;
@@ -97,9 +79,12 @@ export interface DemoLoginResult {
 interface DemoContextType {
   isDemoMode: boolean;
   demoRole: UserRole | null;
+  scenario: DemoScenario;
+  presentation: boolean;
   isSwitching: boolean;
-  demoLogin: (role: UserRole) => Promise<DemoLoginResult>;
+  demoLogin: (role: UserRole, opts?: { scenario?: DemoScenario; presentation?: boolean }) => Promise<DemoLoginResult>;
   switchDemoRole: (role: UserRole) => Promise<DemoLoginResult>;
+  resetDemo: () => void;
   exitDemo: () => Promise<void>;
 }
 
@@ -111,165 +96,60 @@ export const useDemo = () => {
   return ctx;
 };
 
-const friendlyAuthError = (err: unknown): string => {
-  if (!err) return 'No pudimos abrir la demo. Intentá de nuevo en unos segundos.';
-  const message = err instanceof Error ? err.message : String(err);
-  if (/invalid login|invalid credentials/i.test(message)) {
-    return 'La cuenta demo no está disponible. Avisanos para reactivarla.';
-  }
-  if (/network|fetch|failed to fetch/i.test(message)) {
-    return 'Error de conexión. Revisá tu internet e intentá de nuevo.';
-  }
-  return message;
-};
-
-/**
- * Wait until the highest-priority role for the freshly signed-in user matches
- * the expected role. Prevents the navigate() call from running while
- * AuthContext still holds the previous user, which causes RouteGuard to bounce
- * to /dashboard or /login.
- */
-const waitForRole = async (expectedRole: UserRole, timeoutMs = 4000): Promise<void> => {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const userId = sessionData.session?.user?.id;
-    if (userId) {
-      const { data: roleRows } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId);
-      const roles = (roleRows ?? []).map((r) => r.role);
-      if (roles.includes(expectedRole)) return;
-    }
-    await new Promise((r) => setTimeout(r, 80));
-  }
-};
-
 export const DemoProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
-  const [state, setState] = useState<DemoState>(() => {
-    try {
-      const stored = sessionStorage.getItem(DEMO_STORAGE_KEY);
-      if (stored) return JSON.parse(stored);
-    } catch { /* ignore */ }
-    return { isDemoMode: false, demoRole: null };
-  });
-  const [isSwitching, setIsSwitching] = useState(false);
-
-  // Persist to sessionStorage
-  useEffect(() => {
-    if (state.isDemoMode) {
-      sessionStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(state));
-    } else {
-      sessionStorage.removeItem(DEMO_STORAGE_KEY);
-    }
-  }, [state]);
+  const s = useSyncExternalStore(demoSession.subscribe, demoSession.get);
 
   const demoLogin = useCallback<DemoContextType['demoLogin']>(
-    async (role) => {
-      const account = getDemoConfig(role);
-      if (!account) {
-        return { ok: false, error: `Rol demo desconocido: ${role}` };
-      }
-
-      try {
-        setIsSwitching(true);
-        // Activate the mock supabase client BEFORE signing in so AuthContext's
-        // buildUser() reads from the mock dataset (no real DB writes during demo).
-        setDemoMode(true);
-        // Mark demo mode BEFORE auth changes so any LandingPage/RouteGuard
-        // useEffect that watches isAuthenticated also sees isDemoMode=true
-        // and won't redirect to the wrong dashboard mid-flow.
-        setState({ isDemoMode: true, demoRole: role });
-
-        const { error } = await supabase.auth.signInWithPassword({
-          email: account.email,
-          password: account.password,
-        });
-        if (error) throw error;
-
-        await waitForRole(role);
-        navigate(account.dashboard, { replace: true });
-        return { ok: true };
-      } catch (err) {
-        console.error('[demo] login failed:', err);
-        // Revert demo flag if login failed.
-        setDemoMode(false);
-        setState({ isDemoMode: false, demoRole: null });
-        return { ok: false, error: friendlyAuthError(err) };
-      } finally {
-        setIsSwitching(false);
-      }
+    async (role, opts) => {
+      const cfg = getDemoConfig(role);
+      if (!cfg) return { ok: false, error: `Rol demo desconocido: ${role}` };
+      demoSession.start(role, opts);
+      const qs = new URLSearchParams();
+      if (opts?.scenario && opts.scenario !== 'inicio') qs.set('escenario', opts.scenario);
+      if (opts?.presentation) qs.set('modo', 'presentacion');
+      navigate(cfg.dashboard + (qs.toString() ? `?${qs}` : ''), { replace: true });
+      return { ok: true };
     },
-    [navigate]
+    [navigate],
   );
 
   const switchDemoRole = useCallback<DemoContextType['switchDemoRole']>(
     async (role) => {
-      if (role === state.demoRole) return { ok: true };
-      const account = getDemoConfig(role);
-      if (!account) return { ok: false, error: `Rol demo desconocido: ${role}` };
-
-      const previousRole = state.demoRole;
-      try {
-        setIsSwitching(true);
-        setDemoMode(true);
-
-        // 1) Park on a route with no role requirements BEFORE signing out, so
-        //    RouteGuard on the current page (e.g. /admin/dashboard) does not
-        //    bounce to /login the moment the user becomes null.
-        navigate('/', { replace: true });
-        // Let React flush the navigation before tearing down the session.
-        await new Promise((r) => setTimeout(r, 50));
-
-        // Pre-mark new role so LandingPage's auth-redirect effect respects demo.
-        setState({ isDemoMode: true, demoRole: role });
-
-        await supabase.auth.signOut();
-
-        const { error } = await supabase.auth.signInWithPassword({
-          email: account.email,
-          password: account.password,
-        });
-        if (error) throw error;
-
-        // 2) Wait until the new role is observable in the DB so the next
-        //    AuthContext rebuild picks the correct role before RouteGuard runs.
-        await waitForRole(role);
-
-        navigate(account.dashboard, { replace: true });
-        return { ok: true };
-      } catch (err) {
-        console.error('[demo] switch failed:', err);
-        // Roll back to previous demo role on failure.
-        setState({ isDemoMode: previousRole !== null, demoRole: previousRole });
-        return { ok: false, error: friendlyAuthError(err) };
-      } finally {
-        setIsSwitching(false);
-      }
+      const cfg = getDemoConfig(role);
+      if (!cfg) return { ok: false, error: `Rol demo desconocido: ${role}` };
+      demoSession.setRole(role);
+      navigate(cfg.dashboard, { replace: true });
+      return { ok: true };
     },
-    [navigate, state.demoRole]
+    [navigate],
   );
 
+  const resetDemo = useCallback(() => {
+    clubStore.reset();
+    resetMockDataset();
+  }, []);
+
   const exitDemo = useCallback(async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch { /* ignore */ }
-    setState({ isDemoMode: false, demoRole: null });
-    setDemoMode(false);
+    demoSession.exit();
+    resetDemo();
     navigate('/');
-  }, [navigate]);
+  }, [navigate, resetDemo]);
 
   return (
-    <DemoContext.Provider value={{
-      isDemoMode: state.isDemoMode,
-      demoRole: state.demoRole,
-      isSwitching,
-      demoLogin,
-      switchDemoRole,
-      exitDemo,
-    }}>
+    <DemoContext.Provider
+      value={{
+        isDemoMode: s.active,
+        demoRole: s.role,
+        scenario: s.scenario,
+        presentation: s.presentation,
+        isSwitching: false,
+        demoLogin,
+        switchDemoRole,
+        resetDemo,
+        exitDemo,
+      }}
+    >
       {children}
     </DemoContext.Provider>
   );

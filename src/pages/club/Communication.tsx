@@ -1,317 +1,132 @@
-import { useState } from 'react';
-import { AppLayout } from '@/layouts/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMemo, useState } from 'react';
+import { Mail, MessageCircle, Send, Smartphone } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Megaphone, Plus, Pin, Trash2, MoreVertical, Loader2, MessageSquare, AlertTriangle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useClubAnnouncements, type Announcement } from '@/hooks/useClubAnnouncements';
-import { useAuth } from '@/contexts/AuthContext';
-import { cn } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PageHeader, SampleDataNotice, StatusChip } from '@/components/domain';
+import { useClubModel, fmtDate } from '@/demo/selectors';
+import { clubStore } from '@/demo/store';
+import type { Announcement } from '@/types/club';
 
-const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  urgent: { label: 'Urgente', color: 'text-red-700', bg: 'bg-red-100 border-red-200' },
-  high: { label: 'Alta', color: 'text-orange-700', bg: 'bg-orange-100 border-orange-200' },
-  normal: { label: 'Normal', color: 'text-blue-700', bg: 'bg-blue-100 border-blue-200' },
-  low: { label: 'Baja', color: 'text-gray-600', bg: 'bg-gray-100 border-gray-200' },
-};
-
-const ROLE_OPTIONS = [
-  { value: 'player', label: 'Jugadores' },
-  { value: 'parent', label: 'Familias' },
-  { value: 'coach', label: 'Coaches' },
+const TEMPLATES = [
+  { id: 'cuota', label: 'Recordatorio de cuota', title: 'Recordatorio de cuota del mes', body: 'Hola familia, les recordamos que la cuota del mes ya está disponible. Podés abonarla por transferencia, Mercado Pago o en secretaría. ¡Gracias por acompañar!' },
+  { id: 'lluvia', label: 'Suspensión por lluvia', title: 'Suspensión por lluvia', body: 'Por el pronóstico, se suspenden los entrenamientos de hoy. Retomamos mañana en el horario habitual.' },
+  { id: 'apto', label: 'Apto médico por vencer', title: 'Apto médico: vencimiento próximo', body: 'Revisá la fecha de tu apto médico. Sin apto vigente no podemos habilitar la participación en partidos.' },
+  { id: 'semanal', label: 'Resumen semanal para familias', title: 'Resumen semanal del club', body: 'Esta semana: entrenamientos, partidos y novedades de cada categoría. Recordá revisar la cuota y el apto médico de tus hijos. (Envío automático real: próxima fase.)' },
 ];
 
-function AnnouncementCard({
-  announcement,
-  canManage,
-  onTogglePin,
-  onDelete,
-}: {
-  announcement: Announcement;
-  canManage: boolean;
-  onTogglePin: () => void;
-  onDelete: () => void;
-}) {
-  const priorityCfg = PRIORITY_CONFIG[announcement.priority] || PRIORITY_CONFIG.normal;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      layout
-    >
-      <Card className={cn(
-        'transition-colors',
-        announcement.isPinned && 'border-primary/30 bg-primary/5'
-      )}>
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                {announcement.isPinned && (
-                  <Pin className="h-3.5 w-3.5 text-primary shrink-0" />
-                )}
-                <h3 className="font-semibold text-sm truncate">{announcement.title}</h3>
-                <Badge variant="outline" className={cn('text-xs shrink-0', priorityCfg.color, priorityCfg.bg)}>
-                  {priorityCfg.label}
-                </Badge>
-              </div>
-              <p className="text-sm text-foreground/80 whitespace-pre-wrap line-clamp-4">
-                {announcement.content}
-              </p>
-              <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                <span>{announcement.authorName}</span>
-                <span>·</span>
-                <span>{formatDistanceToNow(announcement.createdAt, { addSuffix: true, locale: es })}</span>
-              </div>
-            </div>
-
-            {canManage && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={onTogglePin}>
-                    <Pin className="h-4 w-4 mr-2" />
-                    {announcement.isPinned ? 'Desfijar' : 'Fijar arriba'}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onDelete} className="text-destructive">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Eliminar
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-}
+const CHANNELS: { value: Announcement['channel']; label: string; icon: typeof Mail }[] = [
+  { value: 'app', label: 'App', icon: Smartphone },
+  { value: 'email', label: 'Email', icon: Mail },
+  { value: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+];
 
 const Communication = () => {
-  const { user } = useAuth();
-  const {
-    pinnedAnnouncements,
-    recentAnnouncements,
-    isLoading,
-    createAnnouncement,
-    togglePin,
-    deleteAnnouncement,
-    canCreate,
-  } = useClubAnnouncements();
+  const { data } = useClubModel();
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [all, setAll] = useState(true);
+  const [cats, setCats] = useState<string[]>([]);
+  const [channel, setChannel] = useState<Announcement['channel']>('app');
 
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newContent, setNewContent] = useState('');
-  const [newPriority, setNewPriority] = useState('normal');
-  const [newTargetRoles, setNewTargetRoles] = useState<string[]>(['player', 'parent', 'coach']);
-  const [isSaving, setIsSaving] = useState(false);
+  const audience: Announcement['audience'] = all ? 'todos' : cats;
+  const recipients = useMemo(() => {
+    const members = data.members.filter((m) => all || cats.includes(m.categoryId));
+    return members.length;
+  }, [data.members, all, cats]);
+  const valid = title.trim() && body.trim() && (all || cats.length > 0);
 
-  const handleCreate = async () => {
-    if (!newTitle.trim() || !newContent.trim()) return;
-    setIsSaving(true);
-    const success = await createAnnouncement({
-      title: newTitle.trim(),
-      content: newContent.trim(),
-      priority: newPriority,
-      targetRoles: newTargetRoles,
-    });
-    setIsSaving(false);
-    if (success) {
-      setIsCreateOpen(false);
-      setNewTitle('');
-      setNewContent('');
-      setNewPriority('normal');
-      setNewTargetRoles(['player', 'parent', 'coach']);
-    }
+  const applyTemplate = (id: string) => {
+    const t = TEMPLATES.find((x) => x.id === id);
+    if (t) { setTitle(t.title); setBody(t.body); }
   };
 
-  const canManage = user?.role === 'coach' || user?.role === 'club_admin' || user?.role === 'admin';
-  const totalCount = pinnedAnnouncements.length + recentAnnouncements.length;
+  const catNames = (a: Announcement['audience']) =>
+    a === 'todos' ? 'Todo el club' : a.map((id) => data.categories.find((c) => c.id === id)?.name).filter(Boolean).join(', ');
 
-  if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </AppLayout>
-    );
-  }
+  const send = () => {
+    clubStore.sendAnnouncement({ title: title.trim(), body: body.trim(), audience, channel });
+    toast.success(`Aviso enviado a ${recipients} familias`);
+    setTitle(''); setBody(''); setCats([]); setAll(true);
+  };
 
   return (
-    <AppLayout>
-      <div className="space-y-6 pb-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-        >
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Megaphone className="h-6 w-6 text-primary" />
-              Comunicación
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Comunicados y mensajes del equipo
-            </p>
-          </div>
-          {canCreate && (
-            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Nuevo Comunicado
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Nuevo Comunicado</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Input
-                      placeholder="Título del comunicado"
-                      value={newTitle}
-                      onChange={(e) => setNewTitle(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Textarea
-                      placeholder="Escribí el mensaje..."
-                      value={newContent}
-                      onChange={(e) => setNewContent(e.target.value)}
-                      rows={5}
-                    />
-                  </div>
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <label className="text-sm font-medium mb-1.5 block">Prioridad</label>
-                      <Select value={newPriority} onValueChange={setNewPriority}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">Baja</SelectItem>
-                          <SelectItem value="normal">Normal</SelectItem>
-                          <SelectItem value="high">Alta</SelectItem>
-                          <SelectItem value="urgent">Urgente</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1.5 block">Destinatarios</label>
-                    <div className="flex gap-4">
-                      {ROLE_OPTIONS.map(opt => (
-                        <label key={opt.value} className="flex items-center gap-2 text-sm">
-                          <Checkbox
-                            checked={newTargetRoles.includes(opt.value)}
-                            onCheckedChange={(checked) => {
-                              setNewTargetRoles(prev =>
-                                checked
-                                  ? [...prev, opt.value]
-                                  : prev.filter(r => r !== opt.value)
-                              );
-                            }}
-                          />
-                          {opt.label}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+    <div>
+      <SampleDataNotice />
+      <PageHeader title="Comunicación" description="Avisos por categoría, con plantillas listas" />
+
+      <div className="grid gap-4 lg:grid-cols-5">
+        <section className="rounded-lg border border-border bg-card p-4 shadow-card lg:col-span-3" aria-label="Nuevo aviso" data-tour="composer">
+          <h2 className="font-semibold">Nuevo aviso</h2>
+          <div className="mt-3 space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="tpl">Plantilla</Label>
+              <Select onValueChange={applyTemplate}>
+                <SelectTrigger id="tpl"><SelectValue placeholder="Elegí una plantilla (opcional)" /></SelectTrigger>
+                <SelectContent>{TEMPLATES.map((t) => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5"><Label htmlFor="c-title">Asunto</Label><Input id="c-title" value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label htmlFor="c-body">Mensaje</Label><Textarea id="c-body" rows={5} value={body} onChange={(e) => setBody(e.target.value)} /></div>
+
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">Destinatarios</legend>
+              <label className="flex items-center gap-2 text-sm"><Checkbox checked={all} onCheckedChange={(v) => setAll(v === true)} />Todo el club</label>
+              {!all && (
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  {data.categories.map((c) => (
+                    <label key={c.id} className="flex items-center gap-2 text-sm">
+                      <Checkbox checked={cats.includes(c.id)} onCheckedChange={(v) => setCats((p) => (v === true ? [...p, c.id] : p.filter((x) => x !== c.id)))} />
+                      {c.name}
+                    </label>
+                  ))}
                 </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleCreate}
-                    disabled={!newTitle.trim() || !newContent.trim() || isSaving}
-                  >
-                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Publicar
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
-        </motion.div>
+              )}
+            </fieldset>
 
-        {/* Empty state */}
-        {totalCount === 0 && (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <MessageSquare className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-              <h3 className="font-medium text-lg mb-1">No hay comunicados</h3>
-              <p className="text-sm text-muted-foreground">
-                {canCreate
-                  ? 'Creá el primer comunicado para tu equipo'
-                  : 'Tu equipo aún no ha publicado comunicados'}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Pinned announcements */}
-        {pinnedAnnouncements.length > 0 && (
-          <section className="space-y-3">
-            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-              <Pin className="h-3.5 w-3.5" />
-              Fijados
-            </h2>
-            <AnimatePresence>
-              {pinnedAnnouncements.map(a => (
-                <AnnouncementCard
-                  key={a.id}
-                  announcement={a}
-                  canManage={canManage}
-                  onTogglePin={() => togglePin(a.id, a.isPinned)}
-                  onDelete={() => deleteAnnouncement(a.id)}
-                />
+            <div className="flex flex-wrap items-center gap-2">
+              {CHANNELS.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  aria-pressed={channel === c.value}
+                  onClick={() => setChannel(c.value)}
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm ${channel === c.value ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border text-muted-foreground hover:bg-muted'}`}
+                >
+                  <c.icon className="h-3.5 w-3.5" aria-hidden="true" />{c.label}
+                </button>
               ))}
-            </AnimatePresence>
-          </section>
-        )}
+            </div>
 
-        {/* Recent announcements */}
-        {recentAnnouncements.length > 0 && (
-          <section className="space-y-3">
-            {pinnedAnnouncements.length > 0 && (
-              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                Recientes
-              </h2>
-            )}
-            <AnimatePresence>
-              {recentAnnouncements.map(a => (
-                <AnnouncementCard
-                  key={a.id}
-                  announcement={a}
-                  canManage={canManage}
-                  onTogglePin={() => togglePin(a.id, a.isPinned)}
-                  onDelete={() => deleteAnnouncement(a.id)}
-                />
-              ))}
-            </AnimatePresence>
-          </section>
-        )}
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button onClick={send} disabled={!valid}><Send className="h-4 w-4 mr-1.5" />Enviar a {recipients} familias</Button>
+              <Button variant="outline" disabled={!title.trim()} onClick={() => { clubStore.saveDraft({ title: title.trim(), body: body.trim(), audience, channel }); toast.success('Borrador guardado'); setTitle(''); setBody(''); }}>Guardar borrador</Button>
+            </div>
+            <p className="text-xs text-muted-foreground">En esta fase el aviso queda registrado en el historial; el envío real por email/WhatsApp se conecta en la siguiente.</p>
+          </div>
+        </section>
+
+        <section className="lg:col-span-2" aria-label="Historial">
+          <h2 className="mb-2 font-semibold">Historial</h2>
+          <ul className="space-y-2">
+            {data.announcements.map((a) => (
+              <li key={a.id} className="rounded-lg border border-border bg-card p-3 shadow-card">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium">{a.title}</p>
+                  {a.status === 'borrador' ? <StatusChip tone="neutral">Borrador</StatusChip> : <StatusChip tone="success">Enviado</StatusChip>}
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground">{catNames(a.audience)}{a.sentAt ? ` · ${fmtDate(a.sentAt)}` : ''}</p>
+                <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{a.body}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
       </div>
-    </AppLayout>
+    </div>
   );
 };
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDemo } from '@/contexts/DemoContext';
@@ -12,8 +12,6 @@ import AvatarsSection from '@/components/landing/AvatarsSection';
 import ParentalControlSection from '@/components/landing/ParentalControlSection';
 import CtaBanner from '@/components/landing/CtaBanner';
 import LandingFooter from '@/components/landing/LandingFooter';
-import { DemoRolePickerDialog } from '@/components/demo/DemoRolePickerDialog';
-import { TourProvider, useTour } from '@/components/tour/TourProvider';
 
 const ROLE_DASHBOARD: Record<string, string> = {
   player: '/dashboard',
@@ -26,9 +24,8 @@ const ROLE_DASHBOARD: Record<string, string> = {
 function LandingContent() {
   const { isAuthenticated, user, isLoading } = useAuth();
   const { isDemoMode } = useDemo();
-  const { startTour, isActive: tourActive, stopTour } = useTour();
   const navigate = useNavigate();
-  const [demoDialogOpen, setDemoDialogOpen] = useState(false);
+  const goDemo = () => navigate('/demo');
 
   useEffect(() => {
     // Wait for auth to settle so we don't redirect on a half-loaded state.
@@ -36,27 +33,24 @@ function LandingContent() {
     // Demo mode owns its own navigation in DemoContext — don't race it.
     if (isDemoMode) return;
     if (isAuthenticated && user) {
-      if (tourActive) stopTour();
       const target = ROLE_DASHBOARD[user.role] ?? '/dashboard';
       navigate(target, { replace: true });
     }
-  }, [isAuthenticated, isDemoMode, isLoading, user, navigate, tourActive, stopTour]);
+  }, [isAuthenticated, isDemoMode, isLoading, user, navigate]);
 
   return (
     <>
       <div className="min-h-screen bg-white">
-        <LandingNavbar onDemoClick={() => setDemoDialogOpen(true)} onTourClick={startTour} />
-        <HeroSection onDemoClick={() => setDemoDialogOpen(true)} />
+        <LandingNavbar onDemoClick={goDemo} onTourClick={goDemo} />
+        <HeroSection onDemoClick={goDemo} />
         <StatsSection />
         <VisionSection />
         <CampusSection />
         <AvatarsSection />
         <ParentalControlSection />
-        <CtaBanner onDemoClick={() => setDemoDialogOpen(true)} />
+        <CtaBanner onDemoClick={goDemo} />
         <LandingFooter />
       </div>
-
-      <DemoRolePickerDialog open={demoDialogOpen} onOpenChange={setDemoDialogOpen} />
     </>
   );
 }
@@ -64,9 +58,7 @@ function LandingContent() {
 const LandingPage = () => {
   return (
     <PageTransition>
-      <TourProvider>
-        <LandingContent />
-      </TourProvider>
+      <LandingContent />
     </PageTransition>
   );
 };

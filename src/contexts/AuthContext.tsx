@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useSyncExternalStore, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { demoSession, DEMO_USERS } from '@/demo/session';
 
 export type UserRole = 'player' | 'parent' | 'coach' | 'club_admin' | 'admin';
 
@@ -82,8 +83,13 @@ const buildUser = async (supabaseUser: SupabaseUser): Promise<User> => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [realUser, setUser] = useState<User | null>(null);
+  const [realLoading, setIsLoading] = useState(true);
+  // Demo: usuario inyectado, sin pasar por Supabase Auth.
+  const demo = useSyncExternalStore(demoSession.subscribe, demoSession.get);
+  const demoUser = demo.active && demo.role ? DEMO_USERS[demo.role] ?? null : null;
+  const user: User | null = demoUser ?? realUser;
+  const isLoading = demoUser ? false : realLoading;
 
   useEffect(() => {
     let mounted = true;
@@ -139,6 +145,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
+    if (demoSession.get().active) {
+      demoSession.exit();
+      return;
+    }
     await supabase.auth.signOut();
     setUser(null);
   };
