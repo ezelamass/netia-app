@@ -12,7 +12,11 @@ interface AIInputProps {
   placeholder?: string;
   minHeight?: number;
   maxHeight?: number;
-  onSubmit?: (value: string) => void;
+  /** Devolver `false` conserva el texto escrito (por ejemplo si todavía no se puede enviar). */
+  onSubmit?: (value: string) => void | boolean;
+  /** Modo controlado (borradores por agente, texto precargado). Sin `value` se comporta como antes. */
+  value?: string;
+  onValueChange?: (value: string) => void;
   disabled?: boolean;
   className?: string;
 }
@@ -23,6 +27,8 @@ export function AIInput({
   minHeight = 52,
   maxHeight = 200,
   onSubmit,
+  value,
+  onValueChange,
   disabled,
   className,
 }: AIInputProps) {
@@ -30,15 +36,24 @@ export function AIInput({
     minHeight,
     maxHeight,
   });
-  const [inputValue, setInputValue] = useState("");
+  const [innerValue, setInnerValue] = useState("");
+  const isControlled = value !== undefined;
+  const inputValue = isControlled ? value : innerValue;
+  const setInputValue = (next: string) => {
+    if (!isControlled) setInnerValue(next);
+    onValueChange?.(next);
+  };
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
+  // Ajusta el alto cuando el texto cambia desde afuera (cambio de agente, precarga, transcripción).
+  useEffect(() => { adjustHeight(); }, [inputValue, adjustHeight]);
+
   const handleReset = () => {
     if (!inputValue.trim() || disabled) return;
-    onSubmit?.(inputValue);
+    if (onSubmit?.(inputValue) === false) return;
     setInputValue("");
     adjustHeight(true);
   };
@@ -91,8 +106,7 @@ export function AIInput({
 
       if (error) throw error;
       if (data?.text) {
-        setInputValue((prev) => (prev ? `${prev} ${data.text}` : data.text));
-        setTimeout(() => adjustHeight(), 0);
+        setInputValue(inputValue ? `${inputValue} ${data.text}` : data.text);
       }
     } catch (err) {
       console.error('Transcription error:', err);
@@ -143,7 +157,7 @@ export function AIInput({
           placeholder={isTranscribing ? "Transcribiendo..." : placeholder}
           className={cn(
             "w-full rounded-xl border border-border/60 bg-muted/50 px-4 py-3 pr-20 text-sm text-foreground",
-            "resize-none overflow-hidden",
+            "min-h-0 resize-none overflow-hidden",
             "placeholder:text-muted-foreground",
             "focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary focus-visible:ring-offset-0",
             "disabled:cursor-not-allowed disabled:opacity-50"
@@ -167,6 +181,7 @@ export function AIInput({
           onClick={toggleRecording}
           type="button"
           disabled={disabled}
+          aria-label={isRecording ? "Detener grabación" : "Grabar mensaje de voz"}
           className={cn(
             "absolute top-1/2 -translate-y-1/2 rounded-xl py-1 px-1 transition-all duration-200",
             inputValue.trim() ? "right-10" : "right-3",
@@ -190,16 +205,17 @@ export function AIInput({
           onClick={handleReset}
           type="button"
           disabled={isBusy}
+          aria-label="Enviar mensaje"
           className={cn(
             "absolute top-1/2 -translate-y-1/2 right-3",
-            "rounded-xl bg-black/5 dark:bg-white/5 py-1 px-1",
+            "rounded-xl bg-primary text-primary-foreground py-1 px-1",
             "transition-all duration-200",
             inputValue.trim()
               ? "opacity-100 scale-100"
               : "opacity-0 scale-95 pointer-events-none"
           )}
         >
-          <CornerRightUp className="w-4 h-4 text-black/70 dark:text-white/70" />
+          <CornerRightUp className="w-4 h-4" />
         </button>
       </div>
     </div>

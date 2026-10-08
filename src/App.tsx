@@ -1,4 +1,4 @@
-import { Suspense, lazy, type ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,62 +11,67 @@ import { DemoProvider } from "@/contexts/DemoContext";
 import { RouteGuard } from "@/components/RouteGuard";
 import { AppShell } from "@/layouts/AppShell";
 import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
+import {
+  LandingPage,
+  ClubsLandingPage,
+  Login,
+  Register,
+  NotFound,
+  Demo,
+  DemoEntry,
+  Dashboard,
+  Profile,
+  Calendar,
+  Training,
+  TrainingSession,
+  DiagnosticTest,
+  Chat,
+  Leaderboard,
+  Achievements,
+  Onboarding,
+  Settings,
+  OnboardingResult,
+  ParentDashboard,
+  ParentChild,
+  ParentMedical,
+  ClubDashboard,
+  Members,
+  Teams,
+  Fees,
+  Medical,
+  Attendance,
+  Fixtures,
+  ClubSetup,
+  ParentFees,
+  ParentAnnouncements,
+  TrainingLoad,
+  Reports,
+  Communication,
+  Classroom,
+  ClassroomModule,
+  ClassroomLesson,
+  AdminDashboard,
+  Users,
+  Analytics,
+  AdminSettings,
+  AdminCourses,
+} from "@/routes/lazyPages";
 
 // Public pages
-const LandingPage = lazy(() => import("./pages/LandingPage"));
-const ClubsLandingPage = lazy(() => import("./pages/ClubsLandingPage"));
-const Login = lazy(() => import("./pages/Login"));
-const Register = lazy(() => import("./pages/Register"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const Demo = lazy(() => import("./pages/Demo"));
-const DemoEntry = lazy(() => import("./pages/DemoEntry"));
 
 // Student pages
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Profile = lazy(() => import("./pages/Profile"));
-const Calendar = lazy(() => import("./pages/Calendar"));
-const Training = lazy(() => import("./pages/Training"));
-const DiagnosticTest = lazy(() => import("./pages/DiagnosticTest"));
-const Chat = lazy(() => import("./pages/Chat"));
-const Leaderboard = lazy(() => import("./pages/Leaderboard"));
-const Achievements = lazy(() => import("./pages/Achievements"));
-const Onboarding = lazy(() => import("./pages/Onboarding"));
-const Settings = lazy(() => import("./pages/Settings"));
-const OnboardingResult = lazy(() => import("./pages/OnboardingResult"));
 
 // Parent pages
-const ParentDashboard = lazy(() => import("./pages/parent/ParentDashboard"));
-const ParentChild = lazy(() => import("./pages/parent/ParentChild"));
-const ParentMedical = lazy(() => import("./pages/parent/ParentMedical"));
 
 // Club pages
-const ClubDashboard = lazy(() => import("./pages/club/ClubDashboard"));
-const Members = lazy(() => import("./pages/club/Members"));
-const Teams = lazy(() => import("./pages/club/Teams"));
-const Fees = lazy(() => import("./pages/club/Fees"));
-const Medical = lazy(() => import("./pages/club/Medical"));
-const Attendance = lazy(() => import("./pages/club/Attendance"));
-const Fixtures = lazy(() => import("./pages/club/Fixtures"));
-const ClubSetup = lazy(() => import("./pages/club/ClubSetup"));
-const ParentFees = lazy(() => import("./pages/parent/ParentFees"));
-const ParentAnnouncements = lazy(() => import("./pages/parent/ParentAnnouncements"));
-const TrainingLoad = lazy(() => import("./pages/club/TrainingLoad"));
-const Reports = lazy(() => import("./pages/club/Reports"));
-const Communication = lazy(() => import("./pages/club/Communication"));
 
 // Classroom pages
-const Classroom = lazy(() => import("./pages/Classroom"));
-const ClassroomModule = lazy(() => import("./pages/ClassroomModule"));
-const ClassroomLesson = lazy(() => import("./pages/ClassroomLesson"));
 
 // Admin pages
-const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
-const Users = lazy(() => import("./pages/admin/Users"));
-const Analytics = lazy(() => import("./pages/admin/Analytics"));
-const AdminSettings = lazy(() => import("./pages/admin/Settings"));
-const AdminCourses = lazy(() => import("./pages/admin/Courses"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false } },
+});
 
 const ALL: UserRole[] = ["player", "parent", "coach", "club_admin", "admin"];
 const PLAYER: UserRole[] = ["player", "coach", "club_admin", "admin"];
@@ -106,6 +111,7 @@ const App = () => (
                     <Route path="/profile" element={guard(ALL, <Profile />)} />
                     <Route path="/calendar" element={guard(PLAYER, <Calendar />)} />
                     <Route path="/training" element={guard(PLAYER, <Training />)} />
+                    <Route path="/training/sesion" element={guard(PLAYER, <TrainingSession />)} />
                     <Route path="/chat" element={guard(PLAYER, <Chat />)} />
                     <Route path="/settings" element={guard(ALL, <Settings />)} />
                     <Route path="/leaderboard" element={guard(PLAYER, <Leaderboard />)} />

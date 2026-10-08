@@ -1,6 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+
+const EMPTY_HISTORY: RawDashboard['diagnosticHistory'] = [];
 
 interface DashboardData {
   profile: {
@@ -31,103 +34,63 @@ interface DashboardData {
   isLoading: boolean;
 }
 
+interface RawDashboard {
+  profile: DashboardData['profile'];
+  stats: DashboardData['stats'];
+  latestLog: { hydration_liters?: number; sleep_hours?: number; pain_level?: number; energy_level?: number } | null;
+  weeklyLogs: number;
+  diagnosticHistory: Array<{ axis: string | null; score: number | string | null }>;
+}
+
+async function fetchDashboard(userId: string): Promise<RawDashboard> {
+  const [profileRes, statsRes, latestLogRes, weeklyLogsRes, diagnosticRes] = await Promise.all([
+    supabase.from('profiles').select('full_name, sport, date_of_birth').eq('id', userId).single(),
+    supabase.from('player_stats').select('current_streak, xp, level, total_logs, total_training_min').eq('user_id', userId).single(),
+    supabase.from('daily_logs').select('hydration_liters, sleep_hours, pain_level, energy_level, log_date')
+      .eq('user_id', userId).order('log_date', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('daily_logs').select('id', { count: 'exact', head: true })
+      .eq('user_id', userId).gte('log_date', new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]),
+    supabase.from('diagnostic_history').select('axis, score, recorded_at')
+      .eq('user_id', userId).order('recorded_at', { ascending: false }).limit(20),
+  ]);
+
+  let profile: RawDashboard['profile'] = null;
+  if (profileRes.data) {
+    const dob = profileRes.data.date_of_birth;
+    const age = dob ? Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 86400000)) : 0;
+    profile = { fullName: profileRes.data.full_name, sport: profileRes.data.sport || 'Deporte', age };
+  }
+  const stats: RawDashboard['stats'] = statsRes.data ? {
+    streak: statsRes.data.current_streak,
+    xp: statsRes.data.xp,
+    level: statsRes.data.level,
+    totalLogs: statsRes.data.total_logs,
+    totalTrainingMin: statsRes.data.total_training_min,
+  } : null;
+
+  return {
+    profile,
+    stats,
+    latestLog: latestLogRes.data ?? null,
+    weeklyLogs: weeklyLogsRes.count ?? 0,
+    diagnosticHistory: diagnosticRes.data ?? [],
+  };
+}
+
 export function useDashboardData(): DashboardData {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<DashboardData['profile']>(null);
-  const [stats, setStats] = useState<DashboardData['stats']>(null);
-  const [latestLog, setLatestLog] = useState<any>(null);
-  const [weeklyLogs, setWeeklyLogs] = useState<number>(0);
-  const [diagnosticHistory, setDiagnosticHistory] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const fetchAll = async () => {
-      setIsLoading(true);
-
-      const [profileRes, statsRes, latestLogRes, weeklyLogsRes, diagnosticRes] = await Promise.all([
-        // Profile
-        supabase
-          .from('profiles')
-          .select('full_name, sport, date_of_birth')
-          .eq('id', user.id)
-          .single(),
-
-        // Player stats
-        supabase
-          .from('player_stats')
-          .select('current_streak, xp, level, total_logs, total_training_min')
-          .eq('user_id', user.id)
-          .single(),
-
-        // Latest daily log
-        supabase
-          .from('daily_logs')
-          .select('hydration_liters, sleep_hours, pain_level, energy_level, log_date')
-          .eq('user_id', user.id)
-          .order('log_date', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-
-        // Weekly logs count (last 7 days)
-        supabase
-          .from('daily_logs')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .gte('log_date', new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]),
-
-        // Latest diagnostic scores by axis
-        supabase
-          .from('diagnostic_history')
-          .select('axis, score, recorded_at')
-          .eq('user_id', user.id)
-          .order('recorded_at', { ascending: false })
-          .limit(20),
-      ]);
-
-      // Profile
-      if (profileRes.data) {
-        const dob = profileRes.data.date_of_birth;
-        const age = dob
-          ? Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 86400000))
-          : 0;
-        setProfile({
-          fullName: profileRes.data.full_name,
-          sport: profileRes.data.sport || 'Deporte',
-          age,
-        });
-      }
-
-      // Stats
-      if (statsRes.data) {
-        setStats({
-          streak: statsRes.data.current_streak,
-          xp: statsRes.data.xp,
-          level: statsRes.data.level,
-          totalLogs: statsRes.data.total_logs,
-          totalTrainingMin: statsRes.data.total_training_min,
-        });
-      }
-
-      // Latest log
-      if (latestLogRes.data) {
-        setLatestLog(latestLogRes.data);
-      }
-
-      // Weekly compliance
-      setWeeklyLogs(weeklyLogsRes.count ?? 0);
-
-      // Diagnostic history - get latest per axis
-      if (diagnosticRes.data) {
-        setDiagnosticHistory(diagnosticRes.data);
-      }
-
-      setIsLoading(false);
-    };
-
-    fetchAll();
-  }, [user?.id]);
+  const query = useQuery({
+    queryKey: ['dashboard', user?.id],
+    queryFn: () => fetchDashboard(user!.id),
+    enabled: !!user?.id,
+    staleTime: 60_000,
+  });
+  const profile = query.data?.profile ?? null;
+  const stats = query.data?.stats ?? null;
+  const latestLog = query.data?.latestLog ?? null;
+  const weeklyLogs = query.data?.weeklyLogs ?? 0;
+  const diagnosticHistory = query.data?.diagnosticHistory ?? EMPTY_HISTORY;
+  const isLoading = !!user?.id && query.isLoading;
 
   // Compute health from latest log
   const health = useMemo<DashboardData['health']>(() => {

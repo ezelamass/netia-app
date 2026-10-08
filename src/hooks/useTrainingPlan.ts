@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { SessionType } from '@/types/training';
@@ -38,6 +39,7 @@ export interface DiagnosticAxis {
 }
 
 export interface DaySession {
+  id: string;
   dayIndex: number;
   dayLabel: string;
   type: SessionType | 'rest';
@@ -72,12 +74,9 @@ export interface ComplianceData {
 }
 
 export interface LoadRecoveryData {
-  acuteLoad: number;
-  chronicLoad: number;
-  ratio: number;
   status: 'green' | 'yellow' | 'red';
-  fatigueLevel: number;
-  energyLevel: number;
+  /** RPE promedio de las sesiones hechas esta semana; null si todavía no hay ninguna */
+  avgRpe: number | null;
 }
 
 export interface TrainingPlan {
@@ -98,166 +97,139 @@ export interface TrainingPlan {
   loadRecovery: LoadRecoveryData;
 }
 
+const XP_PER_SESSION = 50;
+
+type ExerciseRow = { phase?: ExerciseBlock['phase']; name?: string; sets?: string; duration?: string; notes?: string };
+
+const mapExercises = (raw: unknown): ExerciseBlock[] =>
+  Array.isArray(raw)
+    ? (raw as ExerciseRow[]).map((e) => ({
+        phase: e.phase || 'main',
+        name: e.name || '',
+        sets: e.sets,
+        duration: e.duration,
+        notes: e.notes,
+      }))
+    : [];
+
+async function fetchPlan(userId: string): Promise<TrainingPlan | null> {
+  const { data: planData } = await supabase
+    .from('training_plans')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!planData) return null;
+
+  const [sessionsRes, diagnosticRes, statsRes, totalRes, doneRes] = await Promise.all([
+    supabase.from('training_plan_sessions').select('*').eq('plan_id', planData.id).eq('week_number', planData.current_week).order('day_index', { ascending: true }),
+    supabase.from('diagnostic_history').select('axis, score, detail').eq('user_id', userId).order('recorded_at', { ascending: false }).limit(10),
+    supabase.from('player_stats').select('current_streak, longest_streak').eq('user_id', userId).maybeSingle(),
+    supabase.from('training_plan_sessions').select('id', { count: 'exact', head: true }).eq('plan_id', planData.id),
+    supabase.from('training_plan_sessions').select('id', { count: 'exact', head: true }).eq('plan_id', planData.id).eq('status', 'completed'),
+  ]);
+  const sessionsData = sessionsRes.data ?? [];
+
+  const axisMap = new Map<string, DiagnosticAxis>();
+  for (const d of diagnosticRes.data ?? []) {
+    if (!axisMap.has(d.axis)) {
+      axisMap.set(d.axis, { axis: d.axis, score: Number(d.score), maxScore: 10, detail: d.detail || '' });
+    }
+  }
+
+  const jsDay = new Date().getDay(); // 0 = domingo
+  const todayIndex = jsDay === 0 ? 6 : jsDay - 1; // 0 = lunes
+
+  const weekSessions: DaySession[] = sessionsData.map((s) => {
+    let status: DaySession['status'] = 'upcoming';
+    if (s.status === 'completed') status = 'completed';
+    else if (s.day_index === todayIndex) status = 'today';
+    if (s.session_type === 'rest') status = 'rest';
+    return {
+      id: s.id,
+      dayIndex: s.day_index,
+      dayLabel: s.day_label,
+      type: s.session_type as SessionType | 'rest',
+      title: s.title,
+      duration: s.duration_min,
+      targetRPE: s.rpe || 5,
+      status,
+      rpeLogged: s.status === 'completed' ? (s.rpe || undefined) : undefined,
+      exercises: mapExercises(s.exercises),
+    };
+  });
+
+  const logged = weekSessions.filter((s) => s.rpeLogged);
+  const avgRpe = logged.length ? logged.reduce((a, s) => a + (s.rpeLogged ?? 0), 0) / logged.length : null;
+  const loadStatus: LoadRecoveryData['status'] = avgRpe === null || avgRpe < 8 ? 'green' : avgRpe < 9 ? 'yellow' : 'red';
+
+  const total = totalRes.count ?? 0;
+  const completed = doneRes.count ?? 0;
+
+  return {
+    id: planData.id,
+    cycleName: planData.cycle_name,
+    cycleNumber: 1,
+    startDate: planData.start_date || '',
+    endDate: planData.end_date || '',
+    currentStage: planData.current_stage as TrainingStage,
+    currentWeek: planData.current_week,
+    totalWeeks: planData.total_weeks,
+    sport: planData.sport,
+    category: planData.category,
+    diagnostic: Array.from(axisMap.values()),
+    objective: {
+      main: planData.objective || '',
+      secondary: [],
+      progress: total ? Math.round((completed / total) * 100) : 0,
+    },
+    weekSessions,
+    compliance: {
+      completedSessions: completed,
+      totalSessions: total,
+      currentStreak: statsRes.data?.current_streak ?? 0,
+      longestStreak: statsRes.data?.longest_streak ?? 0,
+      weeklyTrend: [],
+    },
+    loadRecovery: { status: loadStatus, avgRpe },
+  };
+}
+
 export function useTrainingPlan() {
   const { user } = useAuth();
-  const [plan, setPlan] = useState<TrainingPlan | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const qc = useQueryClient();
+  const query = useQuery({
+    queryKey: ['training-plan', user?.id],
+    queryFn: () => fetchPlan(user!.id),
+    enabled: !!user?.id,
+    staleTime: 60_000,
+  });
 
-  useEffect(() => {
-    if (!user?.id) return;
+  /** Marca la sesión como hecha con el RPE que contó el chico y suma XP. */
+  const completeSession = useCallback(async (sessionId: string, rpe: number) => {
+    if (!user?.id) return false;
+    const { error } = await supabase
+      .from('training_plan_sessions')
+      .update({ status: 'completed', rpe })
+      .eq('id', sessionId);
+    if (error) return false;
+    const { data: stats } = await supabase.from('player_stats').select('xp').eq('user_id', user.id).maybeSingle();
+    if (stats) {
+      await supabase.from('player_stats').update({ xp: (stats.xp || 0) + XP_PER_SESSION }).eq('user_id', user.id);
+    }
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ['training-plan', user.id] }),
+      qc.invalidateQueries({ queryKey: ['gamification', user.id] }),
+      qc.invalidateQueries({ queryKey: ['dashboard', user.id] }),
+    ]);
+    return true;
+  }, [qc, user?.id]);
 
-    const fetchPlan = async () => {
-      setIsLoading(true);
-
-      try {
-        // Fetch active training plan
-        const { data: planData } = await supabase
-          .from('training_plans')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!planData) {
-          setPlan(null);
-          setIsLoading(false);
-          return;
-        }
-
-        // Fetch plan sessions for current week
-        const { data: sessionsData } = await supabase
-          .from('training_plan_sessions')
-          .select('*')
-          .eq('plan_id', planData.id)
-          .eq('week_number', planData.current_week)
-          .order('day_index', { ascending: true });
-
-        // Fetch diagnostic history for this user
-        const { data: diagnosticData } = await supabase
-          .from('diagnostic_history')
-          .select('axis, score, detail')
-          .eq('user_id', user.id)
-          .order('recorded_at', { ascending: false })
-          .limit(10);
-
-        // Fetch player stats for compliance
-        const { data: statsData } = await supabase
-          .from('player_stats')
-          .select('current_streak, longest_streak')
-          .eq('user_id', user.id)
-          .single();
-
-        // Build diagnostic axes (deduplicate by axis)
-        const axisMap = new Map<string, DiagnosticAxis>();
-        for (const d of (diagnosticData || [])) {
-          if (!axisMap.has(d.axis)) {
-            axisMap.set(d.axis, {
-              axis: d.axis,
-              score: Number(d.score),
-              maxScore: 10,
-              detail: d.detail || '',
-            });
-          }
-        }
-
-        // Build week sessions
-        const today = new Date().getDay(); // 0=Sun
-        const todayIndex = today === 0 ? 6 : today - 1; // Convert to 0=Mon
-
-        const weekSessions: DaySession[] = (sessionsData || []).map(s => {
-          const exercises: ExerciseBlock[] = Array.isArray(s.exercises)
-            ? (s.exercises as any[]).map(e => ({
-                phase: e.phase || 'main',
-                name: e.name || '',
-                sets: e.sets,
-                duration: e.duration,
-                notes: e.notes,
-              }))
-            : [];
-
-          let status: DaySession['status'] = 'upcoming';
-          if (s.status === 'completed') status = 'completed';
-          else if (s.day_index === todayIndex) status = 'today';
-          else if (s.day_index < todayIndex) status = 'completed';
-          if (s.session_type === 'rest') status = 'rest';
-
-          return {
-            dayIndex: s.day_index,
-            dayLabel: s.day_label,
-            type: s.session_type as SessionType | 'rest',
-            title: s.title,
-            duration: s.duration_min,
-            targetRPE: s.rpe || 5,
-            status,
-            rpeLogged: s.status === 'completed' ? (s.rpe || undefined) : undefined,
-            exercises,
-          };
-        });
-
-        // Compliance
-        const completedSessions = (sessionsData || []).filter(s => s.status === 'completed').length;
-        const totalAllSessions = sessionsData?.length || 0;
-
-        // Calculate total sessions across all weeks for this plan
-        const { count: totalPlanSessions } = await supabase
-          .from('training_plan_sessions')
-          .select('id', { count: 'exact', head: true })
-          .eq('plan_id', planData.id);
-
-        const { count: completedPlanSessions } = await supabase
-          .from('training_plan_sessions')
-          .select('id', { count: 'exact', head: true })
-          .eq('plan_id', planData.id)
-          .eq('status', 'completed');
-
-        const built: TrainingPlan = {
-          id: planData.id,
-          cycleName: planData.cycle_name,
-          cycleNumber: 1,
-          startDate: planData.start_date || '',
-          endDate: planData.end_date || '',
-          currentStage: planData.current_stage as TrainingStage,
-          currentWeek: planData.current_week,
-          totalWeeks: planData.total_weeks,
-          sport: planData.sport,
-          category: planData.category,
-          diagnostic: Array.from(axisMap.values()),
-          objective: {
-            main: planData.objective || '',
-            secondary: [],
-            progress: totalPlanSessions
-              ? Math.round(((completedPlanSessions ?? 0) / totalPlanSessions) * 100)
-              : 0,
-          },
-          weekSessions,
-          compliance: {
-            completedSessions: completedPlanSessions ?? 0,
-            totalSessions: totalPlanSessions ?? 0,
-            currentStreak: statsData?.current_streak ?? 0,
-            longestStreak: statsData?.longest_streak ?? 0,
-            weeklyTrend: [],
-          },
-          loadRecovery: {
-            acuteLoad: 0,
-            chronicLoad: 0,
-            ratio: 1.0,
-            status: 'green',
-            fatigueLevel: 5,
-            energyLevel: 5,
-          },
-        };
-
-        setPlan(built);
-      } catch (error) {
-        console.error('Error fetching training plan:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPlan();
-  }, [user?.id]);
-
-  return { plan, isLoading };
+  return {
+    plan: query.data ?? null,
+    isLoading: !!user?.id && query.isLoading,
+    completeSession,
+    xpPerSession: XP_PER_SESSION,
+  };
 }

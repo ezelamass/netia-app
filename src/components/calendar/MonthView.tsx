@@ -1,107 +1,67 @@
-import { useMemo } from 'react';
-import { 
-  format, 
-  startOfMonth, 
-  endOfMonth, 
-  startOfWeek, 
-  endOfWeek, 
-  eachDayOfInterval, 
-  isSameMonth, 
-  isSameDay, 
-  isToday 
-} from 'date-fns';
+import { memo, useMemo } from 'react';
+import { eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { motion } from 'framer-motion';
-import { CalendarEvent, getEventConfig } from '@/hooks/useCalendarEvents';
 import { cn } from '@/lib/utils';
+import { getEventIcon, TONE_DOT } from '@/lib/icons';
+import type { EventType } from '@/hooks/useCalendarEvents';
 
 interface MonthViewProps {
-  currentDate: Date;
-  events: CalendarEvent[];
-  onDayClick: (date: Date) => void;
+  month: Date;
+  selected: Date;
+  onSelect: (d: Date) => void;
+  dotsByDay: Record<string, EventType[]>;
 }
 
-const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
-export const MonthView = ({ currentDate, events, onDayClick }: MonthViewProps) => {
-  const calendarDays = useMemo(() => {
-    const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(currentDate);
-    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
-    
-    return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-  }, [currentDate]);
-
-  const getEventsForDay = (date: Date) => {
-    return events.filter(e => isSameDay(e.date, date));
-  };
+export const MonthView = memo(({ month, selected, onSelect, dotsByDay }: MonthViewProps) => {
+  const days = useMemo(
+    () => eachDayOfInterval({
+      start: startOfWeek(startOfMonth(month), { weekStartsOn: 1 }),
+      end: endOfWeek(endOfMonth(month), { weekStartsOn: 1 }),
+    }),
+    [month],
+  );
+  const today = new Date();
 
   return (
-    <div className="bg-background/60 backdrop-blur-sm rounded-xl border p-3">
-      {/* Weekday headers */}
-      <div className="grid grid-cols-7 mb-2">
-        {WEEKDAYS.map((day) => (
-          <div
-            key={day}
-            className="text-center text-xs font-medium text-muted-foreground py-2"
-          >
-            {day}
-          </div>
+    <div className="rounded-2xl border border-border/60 bg-card p-2 sm:p-3">
+      <div className="mb-1 grid grid-cols-7">
+        {WEEKDAYS.map((d, i) => (
+          <span key={i} className="py-1 text-center text-[11px] font-medium text-muted-foreground">{d}</span>
         ))}
       </div>
-      
-      {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-1">
-        {calendarDays.map((day, index) => {
-          const dayEvents = getEventsForDay(day);
-          const isCurrentMonth = isSameMonth(day, currentDate);
-          const isCurrentDay = isToday(day);
-          
+        {days.map((d) => {
+          const key = format(d, 'yyyy-MM-dd');
+          const isSel = isSameDay(d, selected);
+          const isToday = isSameDay(d, today);
+          const dots = (dotsByDay[key] ?? []).slice(0, 3);
           return (
-            <motion.button
-              key={day.toISOString()}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: index * 0.01 }}
-              onClick={() => onDayClick(day)}
+            <button
+              key={key}
+              type="button"
+              onClick={() => onSelect(d)}
+              aria-pressed={isSel}
+              aria-label={format(d, "EEEE d 'de' MMMM", { locale: es })}
               className={cn(
-                "aspect-square p-1 rounded-lg transition-all",
-                "hover:bg-muted/50",
-                !isCurrentMonth && "opacity-30",
-                isCurrentDay && "ring-2 ring-primary ring-offset-1 ring-offset-background"
+                'flex h-12 flex-col items-center justify-center gap-0.5 rounded-xl border text-sm font-medium tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                isSel ? 'border-primary bg-primary text-primary-foreground' : 'border-transparent hover:bg-muted',
+                !isSel && isToday && 'border-primary/40 bg-primary-soft text-primary',
+                !isSameMonth(d, month) && !isSel && 'text-muted-foreground/50',
               )}
             >
-              <div className="h-full flex flex-col">
-                <span className={cn(
-                  "text-sm font-medium",
-                  isCurrentDay ? "text-primary" : "text-foreground"
-                )}>
-                  {format(day, 'd')}
-                </span>
-                
-                {/* Event dots */}
-                <div className="flex-1 flex items-end justify-center gap-0.5 pb-1">
-                  {dayEvents.slice(0, 3).map((event) => {
-                    const config = getEventConfig(event.type);
-                    return (
-                      <div
-                        key={event.id}
-                        className={cn("w-1.5 h-1.5 rounded-full", config.bgColor)}
-                      />
-                    );
-                  })}
-                  {dayEvents.length > 3 && (
-                    <span className="text-[8px] text-muted-foreground ml-0.5">
-                      +{dayEvents.length - 3}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </motion.button>
+              {format(d, 'd')}
+              <span className="flex h-1.5 items-center gap-0.5" aria-hidden="true">
+                {dots.map((t, i) => (
+                  <span key={i} className={cn('h-1.5 w-1.5 rounded-full', isSel ? 'bg-primary-foreground' : TONE_DOT[getEventIcon(t).tone])} />
+                ))}
+              </span>
+            </button>
           );
         })}
       </div>
     </div>
   );
-};
+});
+MonthView.displayName = 'MonthView';

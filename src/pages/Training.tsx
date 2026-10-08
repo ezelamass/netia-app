@@ -1,164 +1,229 @@
-import { useState, useEffect } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { Clock, Moon, Play, Sparkles, Flame, Dumbbell, Wind, type LucideIcon } from 'lucide-react';
 import { AppLayout } from '@/layouts/AppLayout';
-import { useTrainingPlan, TRAINING_STAGES } from '@/hooks/useTrainingPlan';
-import type { TrainingPlan } from '@/hooks/useTrainingPlan';
-import { supabase } from '@/integrations/supabase/client';
+import { useTrainingPlan, type DaySession, type ExerciseBlock } from '@/hooks/useTrainingPlan';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  StageProgressBar,
-  CycleGoalCard,
-  DiagnosticRadar,
-  WeeklyMicrocycle,
-  SessionDetail,
-  ComplianceCard,
-  LoadRecoveryCard,
-} from '@/components/training';
-import { Dumbbell, Sparkles, Clock } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { CardSkeleton } from '@/components/skeletons';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { IconBadge } from '@/components/play/IconBadge';
+import { ProgressRing } from '@/components/play/ProgressRing';
+import { PreviewBadge } from '@/components/play/PreviewBadge';
+import { SectionHeader } from '@/components/play/SectionHeader';
+import {
+  StageProgressBar, WeeklyMicrocycle, LoadRecoveryCard, ChallengeCard, DrillCarousel, CoachNoteCard,
+} from '@/components/training';
+import { CHALLENGES, COACH_NOTE_PREVIEW } from '@/data/training-preview';
+import { SESSION_TYPE_LABELS, type SessionType } from '@/types/training';
+import type { Tone } from '@/lib/icons';
+
+const DiagnosticRadar = lazy(() => import('@/components/training/DiagnosticRadar').then((m) => ({ default: m.DiagnosticRadar })));
+
+const PHASES: { phase: ExerciseBlock['phase']; label: string; icon: LucideIcon; tone: Tone }[] = [
+  { phase: 'warmup', label: 'Entrada en calor', icon: Flame, tone: 'warning' },
+  { phase: 'main', label: 'Parte principal', icon: Dumbbell, tone: 'orange' },
+  { phase: 'cooldown', label: 'Vuelta a la calma', icon: Wind, tone: 'zahia' },
+];
+
+const DaySummary = ({ session, onStart }: { session: DaySession; onStart?: () => void }) => {
+  if (session.type === 'rest') {
+    return (
+      <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-4">
+        <IconBadge icon={Moon} tone="slate" />
+        <p className="text-sm font-medium">Día de descanso. Dormí bien y tomá agua.</p>
+      </div>
+    );
+  }
+  const done = session.status === 'completed';
+  return (
+    <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-muted-foreground">{SESSION_TYPE_LABELS[session.type as SessionType]}</p>
+          <h3 className="truncate font-heading text-lg font-bold">{session.title}</h3>
+        </div>
+        <div className="shrink-0 text-right text-xs text-muted-foreground">
+          <p className="flex items-center justify-end gap-1"><Clock className="h-3.5 w-3.5" aria-hidden="true" />{session.duration} min</p>
+          <p>Esfuerzo {done && session.rpeLogged ? session.rpeLogged : session.targetRPE}/10</p>
+        </div>
+      </div>
+      <ul className="space-y-2">
+        {PHASES.map(({ phase, label, icon, tone }) => {
+          const n = session.exercises.filter((e) => e.phase === phase).length;
+          if (!n) return null;
+          return (
+            <li key={phase} className="flex items-center gap-3">
+              <IconBadge icon={icon} tone={tone} size="sm" />
+              <span className="flex-1 text-sm font-medium">{label}</span>
+              <span className="text-xs text-muted-foreground">{n} {n === 1 ? 'ejercicio' : 'ejercicios'}</span>
+            </li>
+          );
+        })}
+      </ul>
+      {onStart && session.exercises.length > 0 && !done && (
+        <Button className="w-full gap-2" onClick={onStart}><Play className="h-4 w-4" aria-hidden="true" />Empezar sesión</Button>
+      )}
+      {done && <p className="text-sm font-medium text-success">Sesión hecha. ¡Bien ahí!</p>}
+    </div>
+  );
+};
+
+const useCoachNote = () => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['coach-note', user?.id],
+    enabled: !!user?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data: note } = await supabase
+        .from('coach_notes').select('content, created_at, coach_id')
+        .eq('player_id', user!.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (!note) return null;
+      const { data: coach } = await supabase.from('profiles').select('full_name').eq('id', note.coach_id).maybeSingle();
+      return { coach: coach?.full_name ?? 'Tu entrenador', text: note.content as string, date: new Date(note.created_at) };
+    },
+  });
+};
 
 const Training = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { plan, isLoading } = useTrainingPlan();
-  const [userSport, setUserSport] = useState<string | null>(null);
-  const [sportLoading, setSportLoading] = useState(true);
+  const coachNote = useCoachNote();
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [planOpen, setPlanOpen] = useState('');
 
-  // Fetch user's actual sport to decide empty-state messaging
-  useEffect(() => {
-    if (!user?.id) return;
-    (async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('sport')
-        .eq('id', user.id)
-        .maybeSingle();
-      setUserSport(data?.sport ?? null);
-      setSportLoading(false);
-    })();
-  }, [user?.id]);
+  const sportQuery = useQuery({
+    queryKey: ['profile-sport', user?.id],
+    enabled: !!user?.id,
+    staleTime: 5 * 60_000,
+    queryFn: async () => (await supabase.from('profiles').select('sport').eq('id', user!.id).maybeSingle()).data?.sport ?? null,
+  });
+  const userSport = sportQuery.data ?? null;
 
-  const todayIndex = plan?.weekSessions.find(s => s.status === 'today')?.dayIndex ?? 3;
-  const [selectedDay, setSelectedDay] = useState<number>(todayIndex);
-
-  const selectedSession = plan?.weekSessions.find(s => s.dayIndex === selectedDay) || plan?.weekSessions[0];
-
-  if (isLoading || sportLoading) {
+  if (isLoading || sportQuery.isLoading) {
     return (
       <AppLayout>
-        <div className="space-y-6 pb-8">
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
+        <div className="mx-auto max-w-3xl space-y-4">
+          <Skeleton className="h-16 rounded-2xl" /><Skeleton className="h-44 rounded-2xl" /><Skeleton className="h-24 rounded-2xl" />
         </div>
       </AppLayout>
     );
   }
 
-  // Empty state: no plan yet
-  if (!plan) {
-    const isTenis = userSport?.toLowerCase() === 'tenis';
-    return (
-      <AppLayout>
-        <div className="min-h-[60vh] flex items-center justify-center pb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-md text-center space-y-4 p-6"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mx-auto">
-              {isTenis ? (
-                <Clock className="w-7 h-7 text-primary-foreground" />
-              ) : (
-                <Sparkles className="w-7 h-7 text-primary-foreground" />
-              )}
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">
-              {isTenis
-                ? 'Tu plan se está preparando'
-                : userSport
-                  ? `Próximamente disponible para ${userSport}`
-                  : 'Completá tu perfil'}
-            </h1>
-            <p className="text-muted-foreground">
-              {isTenis
-                ? 'Estamos armando tu plan personalizado. Mientras tanto, registrá tu día para que podamos ajustarlo a vos.'
-                : userSport
-                  ? 'Estamos trabajando para traer contenido específico de tu deporte. Por ahora te avisamos cuando esté listo.'
-                  : 'Necesitamos saber tu deporte para armar tu plan de entrenamiento.'}
-            </p>
-            <div className="flex gap-2 justify-center pt-2">
-              <Button onClick={() => navigate('/dashboard')} variant="outline">
-                Volver al panel
-              </Button>
-              {!userSport && (
-                <Button onClick={() => navigate('/onboarding')} className="gradient-netia text-white border-0">
-                  Completar perfil
-                </Button>
-              )}
-            </div>
-          </motion.div>
-        </div>
-      </AppLayout>
-    );
-  }
+  const jsDay = new Date().getDay();
+  const todayIndex = jsDay === 0 ? 6 : jsDay - 1;
+  const activeDay = selectedDay ?? todayIndex;
+  const selected = plan?.weekSessions.find((s) => s.dayIndex === activeDay);
+  const isToday = activeDay === todayIndex;
+  const isTenis = userSport?.toLowerCase() === 'tenis' || userSport?.toLowerCase() === 'tennis';
+  const note = coachNote.data;
 
   return (
     <AppLayout>
-      <div className="space-y-6 pb-8">
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-              <Dumbbell className="w-5 h-5 text-primary-foreground" />
+      <div data-page-ready="" className="mx-auto max-w-3xl space-y-6 pb-8">
+        {plan ? (
+          <header className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="font-heading text-xl font-bold md:text-2xl">Entrenar</h1>
+              <p className="text-sm text-muted-foreground">
+                {plan.sport} · {plan.category} · {plan.cycleName}, semana {plan.currentWeek} de {plan.totalWeeks}
+              </p>
+              {plan.objective.main && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{plan.objective.main}</p>}
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Mi Plan de Entrenamiento</h1>
-              <p className="text-xs text-muted-foreground">{plan.sport} · {plan.category} · {plan.cycleName}</p>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Stage Progress */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-card rounded-2xl p-4 shadow-sm border border-border"
-        >
-          <StageProgressBar currentStage={plan.currentStage} />
-        </motion.div>
-
-        {/* Goal + Diagnostic */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <CycleGoalCard
-            objective={plan.objective}
-            cycleName={plan.cycleName}
-            currentWeek={plan.currentWeek}
-            totalWeeks={plan.totalWeeks}
-          />
-          <DiagnosticRadar diagnostic={plan.diagnostic} />
-        </div>
-
-        {/* Weekly Microcycle */}
-        {plan.weekSessions.length > 0 && (
-          <>
-            <WeeklyMicrocycle
-              sessions={plan.weekSessions}
-              onSelectDay={setSelectedDay}
-              selectedDay={selectedDay}
-            />
-            {selectedSession && <SessionDetail session={selectedSession} />}
-          </>
+            <ProgressRing value={plan.objective.progress} size={64} />
+          </header>
+        ) : (
+          <header>
+            <h1 className="font-heading text-xl font-bold md:text-2xl">Entrenar</h1>
+            <p className="text-sm text-muted-foreground">Acá vas a ver tu plan, tus desafíos y tus ejercicios.</p>
+          </header>
         )}
 
-        {/* Compliance + Load Recovery */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <ComplianceCard compliance={plan.compliance} />
-          <LoadRecoveryCard data={plan.loadRecovery} />
-        </div>
+        {plan && selected && (
+          <section aria-labelledby="hoy">
+            <SectionHeader title={isToday ? 'Sesión de hoy' : `Sesión del ${selected.dayLabel.toLowerCase()}`} />
+            <span id="hoy" className="sr-only">Sesión</span>
+            <DaySummary session={selected} onStart={isToday && selected.status === 'today' ? () => navigate('/training/sesion') : undefined} />
+          </section>
+        )}
+
+        {!plan && (
+          <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card p-4">
+            <IconBadge icon={isTenis ? Clock : Sparkles} />
+            <div className="min-w-0 flex-1 space-y-2">
+              <h2 className="font-heading text-base font-semibold">
+                {isTenis ? 'Tu plan se está preparando' : userSport ? `Próximamente para ${userSport}` : 'Completá tu perfil'}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {isTenis
+                  ? 'Mientras tanto, registrá tu día para que lo ajustemos a vos.'
+                  : userSport
+                    ? 'Estamos armando contenido para tu deporte. Te avisamos cuando esté listo.'
+                    : 'Necesitamos saber tu deporte para armar tu plan.'}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => navigate('/dashboard')}>Volver al inicio</Button>
+                {!userSport && <Button size="sm" onClick={() => navigate('/onboarding')}>Completar perfil</Button>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {plan && plan.weekSessions.length > 0 && (
+          <section>
+            <SectionHeader title="Tu semana de entrenamiento" />
+            <WeeklyMicrocycle sessions={plan.weekSessions} selectedDay={activeDay} onSelectDay={setSelectedDay} />
+          </section>
+        )}
+
+        <section>
+          <div className="mb-2 flex items-center justify-between"><h2 className="font-heading text-base font-semibold">Desafíos de la semana</h2><PreviewBadge /></div>
+          <div className="space-y-2">{CHALLENGES.map((c) => <ChallengeCard key={c.id} challenge={c} />)}</div>
+        </section>
+
+        <section>
+          <div className="mb-2 flex items-center justify-between"><h2 className="font-heading text-base font-semibold">Biblioteca de ejercicios</h2><PreviewBadge /></div>
+          <DrillCarousel />
+        </section>
+
+        <section>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="font-heading text-base font-semibold">Nota de tu entrenador</h2>
+            {!note && <PreviewBadge />}
+          </div>
+          {note ? (
+            <CoachNoteCard coach={note.coach} text={note.text} date={note.date} />
+          ) : (
+            <CoachNoteCard coach={COACH_NOTE_PREVIEW.coach} text={COACH_NOTE_PREVIEW.text} date={new Date(Date.now() - COACH_NOTE_PREVIEW.daysAgo * 86_400_000)} />
+          )}
+        </section>
+
+        {plan && (
+          <section>
+            <SectionHeader title="Carga y recuperación" />
+            <LoadRecoveryCard data={plan.loadRecovery} />
+          </section>
+        )}
+
+        {plan && (
+          <Accordion type="single" collapsible value={planOpen} onValueChange={setPlanOpen} className="rounded-2xl border border-border/60 bg-card px-4">
+            <AccordionItem value="plan" className="border-0">
+              <AccordionTrigger className="text-sm font-semibold hover:no-underline">Cómo se arma tu plan</AccordionTrigger>
+              <AccordionContent className="space-y-4">
+                <StageProgressBar currentStage={plan.currentStage} />
+                {planOpen === 'plan' && (
+                  <Suspense fallback={<Skeleton className="h-64 rounded-xl" />}>
+                    <DiagnosticRadar diagnostic={plan.diagnostic} />
+                  </Suspense>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        )}
       </div>
     </AppLayout>
   );

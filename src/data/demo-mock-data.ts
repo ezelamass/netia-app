@@ -1,3 +1,4 @@
+import { DEMO_USER_IDS } from '@/demo/ids';
 /**
  * Mock dataset for demo mode. Mirrors the shape of Supabase tables (snake_case).
  * Built fresh per session so dates stay relative to "today" — call
@@ -9,11 +10,7 @@
  * authenticate with the real demo accounts.
  */
 
-export const DEMO_USER_IDS = {
-  player: '44e44edc-5484-42d9-9f31-22abe945ccae',
-  coach: '5b20db0d-e111-4e6d-bb98-1d8177b49fe1',
-  admin: '078f89c5-0fb1-4ea7-99c0-6e6ce340c41d',
-} as const;
+export { DEMO_USER_IDS };
 
 export const DEMO_CLUB_ID = 'e1000001-de00-4000-a000-c10b00000001';
 
@@ -145,7 +142,7 @@ export function buildInitialMockData(): MockDataset {
     clubs: [
       {
         id: DEMO_CLUB_ID,
-        name: 'Club Atlético Demo',
+        name: 'Club Los Ceibos',
         sport: 'tennis',
         city: 'Buenos Aires',
         country: 'Argentina',
@@ -328,7 +325,7 @@ export function buildInitialMockData(): MockDataset {
           start_time: start.toISOString(),
           end_time: end.toISOString(),
           description: desc,
-          location: 'Club Atlético Demo',
+          location: 'Club Los Ceibos',
           is_recurring: false,
           created_at: isoAt(-30),
         };
@@ -338,6 +335,18 @@ export function buildInitialMockData(): MockDataset {
       events.push(evt(4, 16, 0, 90, 'Entrenamiento Tenis', 'training', 'Táctica y match play'));
       events.push(evt(5, 10, 0, 120, 'Partido amistoso', 'tournament', 'Vs Club San Isidro'));
       events.push(evt(6, 9, 0, 60, 'Descanso activo', 'rest', 'Movilidad y stretching'));
+      // Eventos del club (creados por el cuerpo técnico; los ve todo el que está inscripto)
+      const clubEvt = (offset: number, h: number, m: number, durationMin: number, title: string, type: string, desc: string, location = 'Club Los Ceibos') => ({
+        ...evt(offset, h, m, durationMin, title, type, desc),
+        id: `club-evt-${offset}-${h}`,
+        user_id: COACH_ID,
+        club_id: DEMO_CLUB_ID,
+        location,
+      });
+      events.push(clubEvt(1, 18, 0, 90, 'Entrenamiento Sub-14', 'training', 'Categoría completa, cancha 2'));
+      events.push(clubEvt(3, 19, 30, 60, 'Reunión de padres', 'school', 'Calendario del torneo y cuotas', 'Quincho del club'));
+      events.push(clubEvt(5, 15, 0, 120, 'Partido vs. San Isidro', 'tournament', 'Torneo de la zona, llegar 14:15', 'Cancha central'));
+      events.push(clubEvt(7, 17, 0, 90, 'Clínica de saque', 'training', 'Con el profe Martín, todas las categorías'));
       return events;
     })(),
 
@@ -350,7 +359,7 @@ export function buildInitialMockData(): MockDataset {
     ],
 
     ai_conversations: [
-      { id: 'conv-roma-1', user_id: PLAYER_ID, avatar: 'ROMA', title: 'Técnica de saque', last_message_at: isoAt(0, 10, 0), created_at: isoAt(-1) },
+      { id: 'conv-roma-1', user_id: PLAYER_ID, avatar: 'ROMA', title: 'Nervios antes del torneo', last_message_at: isoAt(0, 10, 0), created_at: isoAt(-1) },
       { id: 'conv-tino-1', user_id: PLAYER_ID, avatar: 'TINO', title: 'Entrenamiento de la semana', last_message_at: isoAt(-2), created_at: isoAt(-2) },
       { id: 'conv-zahia-1', user_id: PLAYER_ID, avatar: 'ZAHIA', title: 'Hidratación pre-partido', last_message_at: isoAt(-5), created_at: isoAt(-5) },
     ],
@@ -365,11 +374,19 @@ export function buildInitialMockData(): MockDataset {
 
       // Tino conversation
       { id: 'msg-6', conversation_id: 'conv-tino-1', role: 'user', content: 'Tino, qué te parece sumar trabajo de fuerza esta semana?', created_at: isoAt(-2, 17, 30) },
-      { id: 'msg-7', conversation_id: 'conv-tino-1', role: 'assistant', content: 'Excelente idea, campeón. A tu edad la fuerza con peso corporal es lo mejor: sentadillas, planchas y estocadas. 3 series de 10 reps, dos veces por semana, alcanza para empezar a ver cambios en tu juego.', created_at: isoAt(-2, 17, 31) },
+      { id: 'msg-7', conversation_id: 'conv-tino-1', role: 'assistant', content: 'Excelente idea, campeón. A tu edad la fuerza con peso corporal es lo mejor: sentadillas, planchas y estocadas.', created_at: isoAt(-2, 17, 31) },
+      { id: 'msg-7b', conversation_id: 'conv-tino-1', role: 'assistant', content: '3 series de 10 reps, dos veces por semana, alcanza para empezar a ver cambios en tu juego. Hacelo después del calentamiento, nunca en frío.', created_at: isoAt(-2, 17, 32) },
+      { id: 'msg-7c', conversation_id: 'conv-tino-1', role: 'user', content: 'Y los días de partido, entreno fuerza o descanso?', created_at: isoAt(-2, 17, 40) },
+      { id: 'msg-7d', conversation_id: 'conv-tino-1', role: 'assistant', content: 'El día del partido, nada de fuerza: solo un calentamiento de 10 minutos con movilidad y algunos desplazamientos cortos.', created_at: isoAt(-2, 17, 41) },
+      { id: 'msg-7e', conversation_id: 'conv-tino-1', role: 'assistant', content: 'La fuerza la dejamos para los días de entrenamiento, así llegás con las piernas livianas al torneo del sábado.', created_at: isoAt(-2, 17, 42) },
 
       // Zahia conversation
       { id: 'msg-8', conversation_id: 'conv-zahia-1', role: 'user', content: 'Zahia, qué tomo antes de un partido?', created_at: isoAt(-5, 11, 0) },
-      { id: 'msg-9', conversation_id: 'conv-zahia-1', role: 'assistant', content: 'Para un partido de tenis, necesitás hidratarte BIEN desde la noche anterior. Tomá 500ml de agua al despertar, otro vaso 1 hora antes y llevá una botella con sales (puede ser una bebida deportiva diluida) para sorbos cada cambio de lado.', created_at: isoAt(-5, 11, 2) },
+      { id: 'msg-9', conversation_id: 'conv-zahia-1', role: 'assistant', content: 'Para un partido de tenis, necesitás hidratarte BIEN desde la noche anterior. Tomá 500 ml de agua al despertar y otro vaso 1 hora antes.', created_at: isoAt(-5, 11, 2) },
+      { id: 'msg-9b', conversation_id: 'conv-zahia-1', role: 'assistant', content: 'Llevá una botella con sales (puede ser una bebida deportiva diluida) para tomar sorbos en cada cambio de lado.', created_at: isoAt(-5, 11, 3) },
+      { id: 'msg-9c', conversation_id: 'conv-zahia-1', role: 'user', content: 'Y para comer? Qué como antes de jugar?', created_at: isoAt(-5, 11, 10) },
+      { id: 'msg-9d', conversation_id: 'conv-zahia-1', role: 'assistant', content: 'Comé 2 o 3 horas antes: arroz o pasta con pollo y algo de verdura. Evitá frituras y lácteos pesados.', created_at: isoAt(-5, 11, 11) },
+      { id: 'msg-9e', conversation_id: 'conv-zahia-1', role: 'assistant', content: 'Y 1 hora antes, una banana o un yogur con avena te da energía sin pesadez.', created_at: isoAt(-5, 11, 12) },
     ],
 
     // ──────────────────────────────────────
@@ -397,6 +414,103 @@ export function buildInitialMockData(): MockDataset {
       { id: 'sa-9', session_id: 'ts-3', player_id: 'demo-player-002', status: 'present' },
       { id: 'sa-10', session_id: 'ts-1', player_id: 'demo-player-003', status: 'absent' },
     ],
+
+    training_plans: [
+      {
+        id: 'tp-demo-1',
+        user_id: PLAYER_ID,
+        coach_id: COACH_ID,
+        sport: 'Tenis',
+        category: 'Sub-14',
+        cycle_name: 'Ciclo de base',
+        current_stage: 'implementation',
+        current_week: 3,
+        total_weeks: 6,
+        objective: 'Mejorar la consistencia del saque y la resistencia en partidos largos.',
+        start_date: dateOnly(-14),
+        end_date: dateOnly(28),
+        created_at: isoAt(-14),
+      },
+    ],
+
+    training_plan_sessions: (() => {
+      const labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+      const jsDay = new Date().getDay();
+      const todayIdx = jsDay === 0 ? 6 : jsDay - 1;
+      const pattern: Array<'technical' | 'physical' | 'tactical' | 'match' | 'rest'> = ['technical', 'physical', 'rest', 'tactical', 'technical', 'match', 'rest'];
+      if (pattern[todayIdx] === 'rest') pattern[todayIdx] = 'technical';
+      const catalog = {
+        technical: {
+          title: 'Saque y revés', dur: 60, rpe: 6, intensity: 'media',
+          ex: [
+            { phase: 'warmup', name: 'Trote suave y movilidad', duration: '5 min' },
+            { phase: 'warmup', name: 'Peloteo corto desde la línea', duration: '5 min' },
+            { phase: 'main', name: 'Saque a la T (derecha e izquierda)', sets: '4 × 8' },
+            { phase: 'main', name: 'Revés cruzado con objetivo', sets: '3 × 10' },
+            { phase: 'main', name: 'Segundo saque con efecto', sets: '3 × 6' },
+            { phase: 'cooldown', name: 'Estiramiento de hombro y espalda', duration: '5 min' },
+          ],
+        },
+        physical: {
+          title: 'Fuerza y velocidad', dur: 50, rpe: 7, intensity: 'alta',
+          ex: [
+            { phase: 'warmup', name: 'Movilidad de cadera y tobillo', duration: '6 min' },
+            { phase: 'main', name: 'Sentadilla con salto', sets: '3 × 8' },
+            { phase: 'main', name: 'Escalera de coordinación', duration: '4 min' },
+            { phase: 'main', name: 'Sprints de 10 metros', sets: '6 × 1' },
+            { phase: 'cooldown', name: 'Respiración y estiramiento', duration: '5 min' },
+          ],
+        },
+        tactical: {
+          title: 'Puntos y decisiones', dur: 60, rpe: 6, intensity: 'media',
+          ex: [
+            { phase: 'warmup', name: 'Minitenis', duration: '6 min' },
+            { phase: 'main', name: 'Juego de puntos con zonas', duration: '15 min' },
+            { phase: 'main', name: 'Pasar a la red tras el saque', sets: '3 × 6' },
+            { phase: 'cooldown', name: 'Estiramiento suave', duration: '5 min' },
+          ],
+        },
+        match: {
+          title: 'Partido con el grupo', dur: 90, rpe: 8, intensity: 'alta',
+          ex: [
+            { phase: 'warmup', name: 'Calentamiento en cancha', duration: '10 min' },
+            { phase: 'main', name: 'Set completo', duration: '45 min' },
+            { phase: 'cooldown', name: 'Vuelta a la calma', duration: '8 min' },
+          ],
+        },
+        rest: { title: 'Descanso activo', dur: 0, rpe: 1, intensity: 'baja', ex: [] as unknown[] },
+      };
+      const rows: Record<string, unknown>[] = labels.map((label, i) => {
+        const c = catalog[pattern[i]];
+        return {
+          id: `tps-w3-${i}`,
+          plan_id: 'tp-demo-1',
+          week_number: 3,
+          day_index: i,
+          day_label: label,
+          session_type: pattern[i],
+          title: c.title,
+          duration_min: c.dur,
+          rpe: c.rpe,
+          intensity: c.intensity,
+          status: i < todayIdx && pattern[i] !== 'rest' ? 'completed' : 'pending',
+          exercises: c.ex,
+          notes: null,
+          created_at: isoAt(-14),
+        };
+      });
+      // Semanas anteriores: dan el avance del ciclo.
+      for (let w = 1; w <= 2; w++) {
+        for (let i = 0; i < 6; i++) {
+          rows.push({
+            id: `tps-w${w}-${i}`, plan_id: 'tp-demo-1', week_number: w, day_index: i, day_label: labels[i],
+            session_type: pattern[i] === 'rest' ? 'technical' : pattern[i], title: 'Sesión', duration_min: 60,
+            rpe: 6, intensity: 'media', status: i < 4 ? 'completed' : 'pending', exercises: [], notes: null, created_at: isoAt(-14),
+          });
+        }
+      }
+      return rows;
+    })(),
 
     coach_notes: [
       { id: 'cn-1', player_id: PLAYER_ID, coach_id: COACH_ID, club_id: DEMO_CLUB_ID, content: 'Excelente progreso en saque. Mejoró la consistencia del segundo servicio esta semana.', created_at: isoAt(-3) },
@@ -520,6 +634,32 @@ export function mockAvatarReply(avatar: Avatar, message: string): string {
     if (keywords.test(message)) return response;
   }
   return list[list.length - 1].response;
+}
+
+const OPENERS: Record<Avatar, string[]> = {
+  TINO: ['¡Dale, vamos con eso!', 'Buena pregunta, campeón.', '¡Me gusta que lo preguntes!'],
+  ZAHIA: ['¡Qué buena pregunta!', 'Mirá, te lo explico fácil.', 'Perfecto que lo consultes.'],
+  ROMA: ['Gracias por contármelo.', 'Entiendo lo que decís.', 'Eso le pasa a mucha gente que compite.'],
+};
+
+const CLOSERS: Record<Avatar, string> = {
+  TINO: '¿Querés que lo armemos como parte de tu plan de la semana?',
+  ZAHIA: '¿Te armo una idea concreta para hoy?',
+  ROMA: '¿Lo probamos juntos en tu próximo entrenamiento?',
+};
+
+/** Respuesta en 2–3 partes (como el edge function real), con voseo y sobre el tema consultado. */
+export function mockAvatarReplyParts(avatar: Avatar, message: string): string[] {
+  const body = mockAvatarReply(avatar, message);
+  const sentences = body.match(/[^.!?]+[.!?]+(\s|$)/g)?.map((x) => x.trim()) ?? [body];
+  const generic = body === (RESPONSES[avatar] ?? RESPONSES.TINO).slice(-1)[0].response;
+  const opener = generic ? '' : OPENERS[avatar][message.length % OPENERS[avatar].length];
+  const mid = Math.max(1, Math.ceil(sentences.length / 2));
+  const parts = [`${opener} ${sentences.slice(0, mid).join(' ')}`.trim()];
+  const rest = sentences.slice(mid).join(' ').trim();
+  if (rest) parts.push(rest);
+  parts.push(CLOSERS[avatar]);
+  return parts;
 }
 
 export { newId };

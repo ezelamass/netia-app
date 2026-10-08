@@ -1,15 +1,6 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import { footerNav, getNavGroups } from './navConfig';
+import { Suspense, createContext, lazy, useContext, useEffect, useState, type ReactNode } from 'react';
+
+const PaletteDialog = lazy(() => import('./PaletteDialog'));
 
 interface PaletteCtx {
   open: boolean;
@@ -21,9 +12,7 @@ export const useCommandPalette = () => useContext(Ctx);
 
 export const CommandPaletteProvider = ({ children }: { children: ReactNode }) => {
   const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const groups = [...getNavGroups(user?.role), { label: 'Cuenta', items: footerNav }];
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -36,32 +25,17 @@ export const CommandPaletteProvider = ({ children }: { children: ReactNode }) =>
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // El diálogo (cmdk) se descarga la primera vez que se abre.
+  useEffect(() => { if (open) setMounted(true); }, [open]);
+
   return (
     <Ctx.Provider value={{ open, setOpen }}>
       {children}
-      <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Ir a… (socios, cuotas, aptos)" />
-        <CommandList>
-          <CommandEmpty>No encontramos nada.</CommandEmpty>
-          {groups.map((g) => (
-            <CommandGroup key={g.label} heading={g.label}>
-              {g.items.map((item) => (
-                <CommandItem
-                  key={item.href}
-                  value={`${item.label} ${g.label}`}
-                  onSelect={() => {
-                    setOpen(false);
-                    navigate(item.href);
-                  }}
-                >
-                  <item.icon className="mr-2 h-4 w-4" />
-                  {item.label}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          ))}
-        </CommandList>
-      </CommandDialog>
+      {mounted && (
+        <Suspense fallback={null}>
+          <PaletteDialog open={open} onOpenChange={setOpen} />
+        </Suspense>
+      )}
     </Ctx.Provider>
   );
 };

@@ -9,7 +9,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import type { AvatarId } from './AvatarPill';
+import type { AvatarId } from '@/lib/avatars';
 
 export interface ConversationMeta {
   id: string;

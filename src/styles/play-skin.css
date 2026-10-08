@@ -1,0 +1,60 @@
+/* Piel "Play": acento naranja para jugador y familia. Club/coach/admin no la usan. */
+:root {
+  --primary-soft: 214 100% 95%;
+  --brand-orange: 18 100% 61%;
+  --avatar-tino-soft: 211 100% 95%;
+  --avatar-zahia-soft: 162 60% 94%;
+  --avatar-roma-soft: 257 89% 96%;
+  --slate-soft: 215 25% 94%;
+}
+
+[data-skin="play"],
+:root[data-skin="play"] {
+  --primary: 16 88% 44%;
+  --primary-foreground: 0 0% 100%;
+  --primary-soft: 24 100% 95%;
+  --brand-orange: 18 100% 61%;
+  --ring: 16 88% 44%;
+  --accent: 24 100% 95%;
+  --accent-foreground: 16 88% 30%;
+  --surface: 30 40% 98%;
+  --radius: 0.875rem;
+  --sidebar-primary: 16 88% 44%;
+  --sidebar-accent: 24 100% 95%;
+  --sidebar-accent-foreground: 16 88% 30%;
+  --sidebar-ring: 16 88% 44%;
+}
+
+.dark [data-skin="play"],
+.dark[data-skin="play"],
+.dark:root[data-skin="play"] {
+  /* En oscuro el naranja sube de luminosidad y el texto sobre él pasa a oscuro (contraste ≥ 4.5:1 en ambos sentidos) */
+  --primary: 16 90% 58%;
+  --primary-foreground: 16 60% 8%;
+  --ring: 16 90% 58%;
+  --primary-soft: 16 45% 16%;
+  --accent: 16 30% 18%;
+  --accent-foreground: 24 100% 90%;
+  --surface: 222 30% 7%;
+  --avatar-tino-soft: 211 50% 16%;
+  --avatar-zahia-soft: 162 40% 14%;
+  --avatar-roma-soft: 257 40% 18%;
+  --slate-soft: 222 22% 18%;
+  --sidebar-accent: 16 30% 18%;
+  --sidebar-accent-foreground: 24 100% 90%;
+}
+
+[data-skin="play"] h1,
+[data-skin="play"] h2 { font-family: Poppins, sans-serif; }
+[data-skin="play"] .tabular { font-variant-numeric: tabular-nums; }
+
+@keyframes play-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.play-float { animation: play-float 3s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .play-float { animation: none; }
+  [data-skin="play"] * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

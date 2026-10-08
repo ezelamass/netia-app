@@ -1,41 +1,47 @@
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
-import type { AvatarId } from './AvatarPill';
+import type { AvatarId } from '@/lib/avatars';
+import { AgentAvatar } from '@/components/play/AgentAvatar';
 
 interface MessageBubbleProps {
   isUser: boolean;
   avatar: AvatarId;
-  avatarImage: string;
   text: string;
-  index: number;
+  /** Primera burbuja de un grupo consecutivo: lleva el avatar del agente */
+  first: boolean;
+  /** Solo los mensajes nuevos se animan al entrar */
+  fresh?: boolean;
 }
 
-export const MessageBubble = ({ isUser, avatar, avatarImage, text, index }: MessageBubbleProps) => {
-  const avatarBubbleClass =
-    avatar === 'TINO' ? 'bg-tino/10 text-foreground border border-tino/30' :
-    avatar === 'ZAHIA' ? 'bg-zahia/10 text-foreground border border-zahia/30' :
-    'bg-roma/10 text-foreground border border-roma/30';
+const AGENT_BORDER: Record<AvatarId, string> = {
+  TINO: 'border-l-tino',
+  ZAHIA: 'border-l-zahia',
+  ROMA: 'border-l-roma',
+};
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8, x: isUser ? 8 : -8 }}
-      animate={{ opacity: 1, y: 0, x: 0 }}
-      transition={{ duration: 0.25, delay: Math.min(index * 0.05, 0.3) }}
-      className={cn('flex items-end gap-2', isUser ? 'justify-end' : 'justify-start')}
-    >
-      {!isUser && (
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-background">
-          <img src={avatarImage} alt={avatar} className="h-full w-full object-cover" />
-        </div>
-      )}
-      <div className={cn(
-        'max-w-[80%] px-3.5 py-2 text-sm shadow-sm',
+export const MessageBubble = memo(({ isUser, avatar, text, first, fresh }: MessageBubbleProps) => (
+  <div
+    className={cn(
+      'flex items-end gap-2',
+      isUser ? 'justify-end' : 'justify-start',
+      fresh && 'animate-in fade-in slide-in-from-bottom-1 duration-200 motion-reduce:animate-none',
+    )}
+  >
+    {!isUser && (
+      <span className="w-6 shrink-0 self-start">
+        {first && <AgentAvatar agent={avatar} size={24} />}
+      </span>
+    )}
+    <div
+      className={cn(
+        'max-w-[80%] px-3.5 py-2 text-sm',
         isUser
           ? 'rounded-2xl rounded-br-md bg-primary text-primary-foreground'
-          : cn('rounded-2xl rounded-bl-md', avatarBubbleClass),
-      )}>
-        <p className="whitespace-pre-wrap break-words text-sm leading-relaxed font-ai">{text}</p>
-      </div>
-    </motion.div>
-  );
-};
+          : cn('rounded-2xl rounded-bl-md border border-l-[3px] border-border/60 bg-card text-card-foreground shadow-sm', AGENT_BORDER[avatar]),
+      )}
+    >
+      <p className="whitespace-pre-wrap break-words font-ai text-sm leading-relaxed">{text}</p>
+    </div>
+  </div>
+));
+MessageBubble.displayName = 'MessageBubble';

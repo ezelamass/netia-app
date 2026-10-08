@@ -11,7 +11,7 @@
  * guard is now disabled because the mock client makes writes safe.
  */
 
-import { buildInitialMockData, mockAvatarReply, newId, type MockDataset } from '@/data/demo-mock-data';
+import { buildInitialMockData, mockAvatarReplyParts, newId, type MockDataset } from '@/data/demo-mock-data';
 
 const STORAGE_KEY = 'netia_demo_dataset';
 
@@ -408,26 +408,11 @@ const handleFunctionInvoke = async (
   options: { body?: any } = {}
 ): Promise<{ data: any; error: any }> => {
   if (fnName === 'avatar-chat') {
-    const { message, avatar, conversationId } = options.body ?? {};
-    const reply = mockAvatarReply((avatar ?? 'TINO').toUpperCase(), message ?? '');
-    // Simulate latency
-    await new Promise(r => setTimeout(r, 600));
-    // Persist the assistant message in mock storage so the chat UI sees it on refetch
-    if (conversationId) {
-      const msgs = getTable('ai_messages');
-      msgs.push({
-        id: newId('ai_msg'),
-        conversation_id: conversationId,
-        role: 'assistant',
-        content: reply,
-        created_at: new Date().toISOString(),
-      });
-      // Bump conversation last_message_at
-      const conv = getTable('ai_conversations').find(c => c.id === conversationId);
-      if (conv) conv.last_message_at = new Date().toISOString();
-      saveDataset();
-    }
-    return { data: { reply, message: reply }, error: null };
+    // Igual que el edge function real: devuelve las partes y el cliente las guarda y escalona.
+    const { message, avatar } = options.body ?? {};
+    const respuesta = mockAvatarReplyParts((avatar ?? 'TINO').toUpperCase(), message ?? '');
+    await new Promise((r) => setTimeout(r, 700));
+    return { data: { respuesta }, error: null };
   }
   console.warn(`[MockClient] Unhandled edge function: ${fnName}`);
   return { data: null, error: null };

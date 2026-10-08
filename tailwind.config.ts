@@ -22,7 +22,10 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          soft: "hsl(var(--primary-soft))",
         },
+        "brand-orange": "hsl(var(--brand-orange))",
+        slate: { soft: "hsl(var(--slate-soft))" },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
@@ -87,9 +90,9 @@ export default {
           zahia: "hsl(var(--avatar-zahia))",
           roma: "hsl(var(--avatar-roma))",
         },
-        tino: "hsl(var(--avatar-tino))",
-        zahia: "hsl(var(--avatar-zahia))",
-        roma: "hsl(var(--avatar-roma))",
+        tino: { DEFAULT: "hsl(var(--avatar-tino))", soft: "hsl(var(--avatar-tino-soft))" },
+        zahia: { DEFAULT: "hsl(var(--avatar-zahia))", soft: "hsl(var(--avatar-zahia-soft))" },
+        roma: { DEFAULT: "hsl(var(--avatar-roma))", soft: "hsl(var(--avatar-roma-soft))" },
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
@@ -107,6 +110,7 @@ export default {
         pop: "var(--shadow-pop)",
       },
       keyframes: {
+        float: { "0%, 100%": { transform: "translateY(0)" }, "50%": { transform: "translateY(-4px)" } },
         "accordion-down": {
           from: {
             height: "0",

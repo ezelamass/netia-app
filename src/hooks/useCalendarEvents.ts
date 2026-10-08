@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, startOfWeek, addWeeks, isSameDay, startOfMonth, endOfMonth, isBefore, isAfter, format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,61 +18,84 @@ export interface CalendarEvent {
   description?: string;
   isRecurring?: boolean;
   isCompleted?: boolean;
+  location?: string;
+  /** 'mio' = del usuario; 'club' = evento del club (solo lectura) */
+  source?: 'mio' | 'club';
+  clubId?: string;
 }
 
 export interface EventTypeConfig {
   type: EventType;
   label: string;
-  emoji: string;
-  color: string;
-  bgColor: string;
 }
 
 export const EVENT_TYPES: EventTypeConfig[] = [
-  { type: 'training', label: 'Entrenamiento', emoji: '🏋️', color: 'text-blue-600', bgColor: 'bg-blue-500' },
-  { type: 'nutrition', label: 'Plan nutricional', emoji: '🍎', color: 'text-emerald-600', bgColor: 'bg-emerald-500' },
-  { type: 'mental', label: 'Sesión mental', emoji: '🧠', color: 'text-violet-600', bgColor: 'bg-violet-500' },
-  { type: 'tournament', label: 'Torneo', emoji: '🏆', color: 'text-orange-600', bgColor: 'bg-orange-500' },
-  { type: 'school', label: 'Escolar', emoji: '📚', color: 'text-gray-600', bgColor: 'bg-gray-500' },
-  { type: 'rest', label: 'Descanso', emoji: '🌴', color: 'text-green-600', bgColor: 'bg-green-400' },
-  { type: 'alert', label: 'Alerta', emoji: '⚠️', color: 'text-yellow-600', bgColor: 'bg-yellow-500' },
+  { type: 'training', label: 'Entrenamiento' },
+  { type: 'nutrition', label: 'Nutrición' },
+  { type: 'mental', label: 'Sesión mental' },
+  { type: 'tournament', label: 'Partido o torneo' },
+  { type: 'school', label: 'Escolar' },
+  { type: 'rest', label: 'Descanso' },
+  { type: 'alert', label: 'Aviso' },
 ];
 
-export const getEventConfig = (type: EventType): EventTypeConfig => {
-  return EVENT_TYPES.find(e => e.type === type) || EVENT_TYPES[0];
+export const getEventConfig = (type: EventType): EventTypeConfig =>
+  EVENT_TYPES.find((e) => e.type === type) ?? EVENT_TYPES[0];
+
+type EventRow = {
+  id: string; title: string; start_time: string; end_time: string | null; event_type: string | null;
+  description: string | null; is_recurring: boolean | null; location: string | null; club_id: string | null;
 };
+
+export const mapEventRow = (row: EventRow, source: 'mio' | 'club'): CalendarEvent => ({
+  id: row.id,
+  title: row.title,
+  date: new Date(row.start_time),
+  startTime: row.start_time ? format(new Date(row.start_time), 'HH:mm') : undefined,
+  endTime: row.end_time ? format(new Date(row.end_time), 'HH:mm') : undefined,
+  type: (row.event_type || 'training') as EventType,
+  description: row.description || undefined,
+  isRecurring: row.is_recurring || false,
+  isCompleted: false,
+  location: row.location || undefined,
+  source,
+  clubId: row.club_id || undefined,
+});
+
+const EMPTY: CalendarEvent[] = [];
+
+/** Eventos propios + eventos de mis clubs (dos consultas, compatibles con el mock de la demo). */
+async function fetchCalendar(userId: string): Promise<CalendarEvent[]> {
+  const [mine, clubIdsRes] = await Promise.all([
+    supabase.from('calendar_events').select('*').eq('user_id', userId).order('start_time', { ascending: true }),
+    supabase.rpc('get_user_club_ids', { _user_id: userId }),
+  ]);
+  const own = (mine.data ?? []).map((r) => mapEventRow(r as EventRow, 'mio'));
+  const clubIds: string[] = clubIdsRes.data ?? [];
+  if (!clubIds.length) return own;
+  const club = await supabase.from('calendar_events').select('*').in('club_id', clubIds).order('start_time', { ascending: true });
+  const ownIds = new Set(own.map((e) => e.id));
+  const fromClub = (club.data ?? [])
+    .filter((r) => !ownIds.has(r.id))
+    .map((r) => mapEventRow(r as EventRow, 'club'));
+  return [...own, ...fromClub].sort((x, y) => x.date.getTime() - y.date.getTime());
+}
 
 export const useCalendarEvents = () => {
   const { user } = useAuth();
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchEvents = useCallback(async () => {
-    if (!user) { setEvents([]); setIsLoading(false); return; }
-
-    const { data, error } = await supabase
-      .from('calendar_events')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('start_time', { ascending: true });
-
-    if (!error && data) {
-      setEvents(data.map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        date: new Date(row.start_time),
-        startTime: row.start_time ? format(new Date(row.start_time), 'HH:mm') : undefined,
-        endTime: row.end_time ? format(new Date(row.end_time), 'HH:mm') : undefined,
-        type: (row.event_type || 'training') as EventType,
-        description: row.description || undefined,
-        isRecurring: row.is_recurring || false,
-        isCompleted: false,
-      })));
-    }
-    setIsLoading(false);
-  }, [user]);
-
-  useEffect(() => { fetchEvents(); }, [fetchEvents]);
+  const qc = useQueryClient();
+  const query = useQuery({
+    queryKey: ['calendar', user?.id],
+    queryFn: () => fetchCalendar(user!.id),
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+  const events = query.data ?? EMPTY;
+  const isLoading = !!user && query.isLoading;
+  const fetchEvents = useCallback(
+    () => qc.invalidateQueries({ queryKey: ['calendar', user?.id] }),
+    [qc, user?.id],
+  );
 
   const addEvent = async (event: Omit<CalendarEvent, 'id'>) => {
     if (!user) return null;
@@ -105,7 +129,10 @@ export const useCalendarEvents = () => {
     return null;
   };
 
+  const isClubEvent = (id: string) => events.find((e) => e.id === id)?.source === 'club';
+
   const updateEvent = async (id: string, updates: Partial<CalendarEvent>) => {
+    if (isClubEvent(id)) return;
     const updatePayload: Record<string, any> = {};
     if (updates.title) updatePayload.title = updates.title;
     if (updates.type) updatePayload.event_type = updates.type;
@@ -116,6 +143,7 @@ export const useCalendarEvents = () => {
   };
 
   const deleteEvent = async (id: string) => {
+    if (isClubEvent(id)) return;
     await supabase.from('calendar_events').delete().eq('id', id);
     fetchEvents();
   };

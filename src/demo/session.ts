@@ -4,7 +4,7 @@
  * síncrona, sin polling ni cuentas reales.
  */
 import type { UserRole } from '@/contexts/AuthContext';
-import { DEMO_USER_IDS } from '@/data/demo-mock-data';
+import { DEMO_USER_IDS } from '@/demo/ids';
 
 export type DemoScenario = 'inicio' | 'morosidad' | 'aptos';
 

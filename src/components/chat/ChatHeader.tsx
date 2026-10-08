@@ -1,10 +1,9 @@
+import { History, SquarePen } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { History, RotateCcw } from 'lucide-react';
-import type { AvatarId } from './AvatarPill';
+import { AGENTS, type AvatarId } from '@/lib/avatars';
 
 interface ChatHeaderProps {
   avatar: AvatarId;
-  avatarImage: string;
   onNewChat: () => void;
   onOpenHistory: () => void;
   disabled?: boolean;
@@ -13,52 +12,27 @@ interface ChatHeaderProps {
   maxCount: number;
 }
 
-const AVATAR_META: Record<AvatarId, { tagline: string; accentBorder: string; accentBg: string }> = {
-  TINO: { tagline: 'Tu coach de entrenamiento', accentBorder: 'border-tino/30', accentBg: 'bg-tino/5' },
-  ZAHIA: { tagline: 'Tu guía de nutrición', accentBorder: 'border-zahia/30', accentBg: 'bg-zahia/5' },
-  ROMA: { tagline: 'Tu mentor mental', accentBorder: 'border-roma/30', accentBg: 'bg-roma/5' },
+const TINT: Record<AvatarId, string> = {
+  TINO: 'bg-tino-soft/70',
+  ZAHIA: 'bg-zahia-soft/70',
+  ROMA: 'bg-roma-soft/70',
 };
 
-export const ChatHeader = ({
-  avatar, avatarImage, onNewChat, onOpenHistory, disabled, atLimit, totalCount, maxCount,
-}: ChatHeaderProps) => {
-  const meta = AVATAR_META[avatar];
+const btn =
+  'flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium text-muted-foreground transition-colors duration-150 hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50';
 
-  return (
-    <div className={cn(
-      "flex items-center justify-between gap-3 border-b px-4 py-2.5",
-      meta.accentBorder, meta.accentBg
-    )}>
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-background shadow-sm">
-          <img src={avatarImage} alt={avatar} className="h-full w-full object-cover" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-foreground leading-tight">{avatar}</p>
-          <p className="text-xs text-muted-foreground truncate">{meta.tagline}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <button
-          type="button"
-          onClick={onOpenHistory}
-          className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-2.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <History className="h-3.5 w-3.5" />
-          <span className={cn(atLimit && "text-destructive font-semibold")}>
-            {totalCount}/{maxCount}
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={onNewChat}
-          disabled={disabled}
-          className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
-        >
-          <RotateCcw className="h-3 w-3" />
-          Nuevo chat
-        </button>
-      </div>
+/** Barra del agente: tagline + historial (n/5) + nuevo chat. */
+export const ChatHeader = ({ avatar, onNewChat, onOpenHistory, disabled, atLimit, totalCount, maxCount }: ChatHeaderProps) => (
+  <div className={cn('flex h-10 items-center justify-between gap-2 border-b border-border/60 px-3', TINT[avatar])}>
+    <p className="truncate text-xs text-muted-foreground">{AGENTS[avatar].tagline}</p>
+    <div className="flex items-center gap-1">
+      <button type="button" onClick={onOpenHistory} className={btn} aria-label={`Historial de chats, ${totalCount} de ${maxCount}`}>
+        <History className="h-4 w-4" aria-hidden="true" />
+        <span className={cn('tabular-nums', atLimit && 'font-semibold text-destructive')}>{totalCount}/{maxCount}</span>
+      </button>
+      <button type="button" onClick={onNewChat} disabled={disabled} className={btn} aria-label="Nuevo chat">
+        <SquarePen className="h-4 w-4" aria-hidden="true" />
+      </button>
     </div>
-  );
-};
+  </div>
+);

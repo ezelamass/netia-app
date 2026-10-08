@@ -1,9 +1,7 @@
 import { useState, useRef } from 'react';
 import { Camera, Upload, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import tinoAvatar from '@/assets/tino-avatar.png';
-import zahiaAvatar from '@/assets/zahia-avatar.png';
-import romaAvatar from '@/assets/roma-avatar.png';
+import { AGENTS } from '@/lib/avatars';
 import {
   Dialog,
   DialogContent,
@@ -25,17 +23,17 @@ interface ProfileAvatarProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-// Avatar images mapped correctly (files are swapped)
+// Imágenes por agente
 const AVATAR_IMAGES = {
-  TINO: romaAvatar,
-  ZAHIA: tinoAvatar,
-  ROMA: zahiaAvatar,
+  TINO: AGENTS.TINO.image,
+  ZAHIA: AGENTS.ZAHIA.image,
+  ROMA: AGENTS.ROMA.image,
 };
 
 const AVATAR_OPTIONS = [
-  { id: 'TINO', name: 'TINO', image: romaAvatar },
-  { id: 'ZAHIA', name: 'ZAHIA', image: tinoAvatar },
-  { id: 'ROMA', name: 'ROMA', image: zahiaAvatar },
+  { id: 'TINO', name: 'TINO', image: AGENTS.TINO.image },
+  { id: 'ZAHIA', name: 'ZAHIA', image: AGENTS.ZAHIA.image },
+  { id: 'ROMA', name: 'ROMA', image: AGENTS.ROMA.image },
 ];
 
 const sizeClasses = {

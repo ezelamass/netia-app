@@ -1,121 +1,132 @@
+import { useMemo } from 'react';
+import { addDays, format, isAfter, isSameDay, startOfWeek } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Link } from 'react-router-dom';
 import { AppLayout } from '@/layouts/AppLayout';
 import { TodayCard } from '@/components/dashboard/TodayCard';
-import { ProgressWidget } from '@/components/dashboard/ProgressWidget';
-import { HealthWidget } from '@/components/dashboard/HealthWidget';
-import { TechniqueWidget } from '@/components/dashboard/TechniqueWidget';
-import { PhysicalTrainingWidget } from '@/components/dashboard/PhysicalTrainingWidget';
-import { EvolutionWidget } from '@/components/dashboard/EvolutionWidget';
-import { GamificationWidget } from '@/components/dashboard/GamificationWidget';
-import { JoinClubModal } from '@/components/enrollment/JoinClubModal';
-import { EnrollmentsList } from '@/components/enrollment/EnrollmentsList';
-import { AvatarMessageWidget } from '@/components/dashboard/AvatarMessageWidget';
+import { TeamCards } from '@/components/dashboard/TeamCards';
+import { ClubCard } from '@/components/dashboard/ClubCard';
+import { XpCard } from '@/components/dashboard/XpCard';
+import { HowYouAreCard } from '@/components/dashboard/HowYouAreCard';
+import { SectionHeader } from '@/components/play/SectionHeader';
+import { StatPill } from '@/components/play/StatPill';
+import { WeekStrip } from '@/components/play/WeekStrip';
+import { PageSkeleton } from '@/components/skeletons/PageSkeleton';
+import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { CardSkeleton } from '@/components/skeletons';
+import { useDailyLog } from '@/hooks/useDailyLog';
+import { useCalendarEvents, type EventType } from '@/hooks/useCalendarEvents';
+import { useGamification } from '@/hooks/useGamification';
+import { useEnrollment } from '@/hooks/useEnrollment';
+import { useClubAnnouncements } from '@/hooks/useClubAnnouncements';
+import { ICONS } from '@/lib/icons';
+import { LEVEL_CONFIG, calculateLevel, getNextLevelXP, LEVEL_THRESHOLDS } from '@/types/gamification';
 
 const Dashboard = () => {
-  const { profile, stats, health, weeklyCompliance, diagnosticScores, isLoading } = useDashboardData();
+  const { user } = useAuth();
+  const { profile, stats, health, weeklyCompliance, isLoading } = useDashboardData();
+  const { logs, getLogsForDays, getStreak, hasLoggedToday } = useDailyLog();
+  const { events } = useCalendarEvents();
+  const { currentXP: computedXP, earned, badgeProgress } = useGamification();
+  const { enrollments } = useEnrollment();
+  const { announcements } = useClubAnnouncements();
 
-  const userName = profile?.fullName?.split(' ')[0] || 'Deportista';
-  const sport = profile?.sport || 'Deporte';
-  const age = profile?.age || 0;
-  const streak = stats?.streak || 0;
+  const today = new Date();
+  const name = (profile?.fullName ?? user?.name ?? '').split(' ')[0] || 'Deportista';
+  const streak = Math.max(getStreak(), stats?.streak ?? 0);
+  // La fuente de verdad del XP es player_stats; si todavía no hay fila, se usa el cálculo local.
+  const currentXP = Math.max(stats?.xp ?? 0, computedXP);
+  const currentLevel = calculateLevel(currentXP);
+  const nextLevelXP = getNextLevelXP(currentLevel);
+  const levelFloor = LEVEL_THRESHOLDS[currentLevel];
+  const levelProgress = nextLevelXP > levelFloor ? ((currentXP - levelFloor) / (nextLevelXP - levelFloor)) * 100 : 100;
 
-  const sleepFormatted = health
-    ? `${Math.floor(health.sleepHours)}h ${Math.round((health.sleepHours % 1) * 60)}m`
-    : '—';
+  const todayEvents = useMemo(
+    () => events.filter((e) => isSameDay(e.date, new Date())).sort((a, b) => (a.startTime ?? '99').localeCompare(b.startTime ?? '99')),
+    [events],
+  );
+
+  const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), []);
+  const dotsByDay = useMemo(() => {
+    const map: Record<string, EventType[]> = {};
+    for (const e of events) {
+      const k = format(e.date, 'yyyy-MM-dd');
+      (map[k] ??= []).push(e.type);
+    }
+    return map;
+  }, [events]);
+
+  const enrollment = enrollments.find((e) => e.status === 'active') ?? enrollments[0] ?? null;
+  const nextClubEvent = useMemo(
+    () => events.find((e) => e.source === 'club' && (isAfter(e.date, new Date()) || isSameDay(e.date, new Date()))) ?? null,
+    [events],
+  );
+  const lastAnnouncement = useMemo(
+    () => [...announcements].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0] ?? null,
+    [announcements],
+  );
+
+  const lastBadges = useMemo(() => {
+    const byId = new Map(badgeProgress.map((b) => [b.id, b]));
+    return [...earned]
+      .sort((a, b) => (b.earned_at ?? '').localeCompare(a.earned_at ?? ''))
+      .map((r) => byId.get(r.badge_id))
+      .filter((b): b is NonNullable<typeof b> => !!b)
+      .slice(0, 3);
+  }, [earned, badgeProgress]);
+
+  const energy7 = useMemo(() => getLogsForDays(7).map((l) => l.energy), [getLogsForDays]);
+
+  if (isLoading && !profile) return <PageSkeleton />;
 
   return (
     <AppLayout>
-      {/* Hero - Today Card */}
-      <div className="mb-6">
-        <TodayCard />
-      </div>
+      <div data-page-ready className="mx-auto grid max-w-6xl grid-cols-1 gap-5 lg:grid-cols-12 [&>*]:min-w-0">
+        <header className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3 lg:col-span-12">
+          <div className="min-w-0">
+            <h1 className="font-heading text-[22px] font-bold leading-tight md:text-[28px]">¡Hola, {name}!</h1>
+            <p className="text-sm text-muted-foreground first-letter:uppercase">{format(today, "EEEE d 'de' MMMM", { locale: es })}</p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end">
+            {streak > 0 && <StatPill icon={ICONS.streak.icon} value={`${streak} ${streak === 1 ? 'día' : 'días'}`} label="Racha" tone="orange" />}
+            <StatPill icon={ICONS.xp.icon} value={`${LEVEL_CONFIG[currentLevel].label} · ${currentXP} XP`} label="Nivel" tone="orange" />
+          </div>
+        </header>
 
-      {/* Avatar Message */}
-      <div className="mb-6">
-        <AvatarMessageWidget
-          streak={streak}
-          hasLogToday={!!health}
-          energyLevel={health?.energyLevel ?? null}
-        />
-      </div>
+        <div className="space-y-5 lg:col-span-8">
+          <TodayCard todayEvents={todayEvents} />
 
-      {/* Club Enrollment */}
-      <div className="mb-6 space-y-4">
-        <div className="flex justify-end">
-          <JoinClubModal />
+          <section>
+            <SectionHeader title="Tu equipo" />
+            <TeamCards
+              streak={streak}
+              hasLogToday={hasLoggedToday}
+              energyLevel={health?.energyLevel ?? null}
+              hydrationLiters={health?.hydration ?? null}
+            />
+          </section>
+
+          <section>
+            <SectionHeader title="Tu semana" action={{ label: 'Ver calendario', to: '/calendar' }} />
+            <div className="rounded-2xl border border-border/60 bg-card p-2 shadow-card">
+              <WeekStrip weekStart={weekStart} selected={today} dotsByDay={dotsByDay} readOnly />
+            </div>
+          </section>
         </div>
-        <EnrollmentsList />
-      </div>
 
-      {/* Gamification + Progress Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <GamificationWidget delay={0.05} />
-        {isLoading ? (
-          <CardSkeleton />
-        ) : (
-          <ProgressWidget
-            userName={userName}
-            sport={sport}
-            age={age}
-            streak={streak}
-            weeklyCompliance={weeklyCompliance}
-            delay={0.1}
-          />
-        )}
-      </div>
+        <aside className="space-y-5 lg:col-span-4">
+          <section>
+            <SectionHeader title="Mi club" />
+            <ClubCard enrollment={enrollment} nextClubEvent={nextClubEvent} lastAnnouncement={lastAnnouncement} />
+          </section>
 
-      {/* Second Row - Health */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {isLoading ? (
-          <CardSkeleton />
-        ) : (
-          <HealthWidget
-            hydration={health?.hydration ?? 0}
-            sleep={sleepFormatted}
-            recovery={health?.recovery ?? 'optimal'}
-            delay={0.2}
-          />
-        )}
-      </div>
+          <section>
+            <SectionHeader title="Progreso" action={{ label: 'Ver logros', to: '/achievements' }} />
+            <XpCard level={currentLevel} xp={currentXP} nextLevelXP={nextLevelXP} progress={levelProgress} badges={lastBadges} />
+          </section>
 
-      {/* Third Row - Technique and Physical */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {isLoading ? (
-          <>
-            <CardSkeleton />
-            <CardSkeleton />
-          </>
-        ) : (
-          <>
-            <TechniqueWidget
-              correctDecisions={diagnosticScores.technique > 0 ? Math.round(diagnosticScores.technique * 10) : 0}
-              concentration={diagnosticScores.mental > 0 ? diagnosticScores.mental : 0}
-              reactionTime={0}
-              delay={0.3}
-            />
-            <PhysicalTrainingWidget
-              maxSpeed={0}
-              resistance={diagnosticScores.physical > 0 ? Math.min(5, Math.round(diagnosticScores.physical / 2)) : 0}
-              attendance={{ completed: stats?.totalLogs ?? 0, total: 7 }}
-              delay={0.35}
-            />
-          </>
-        )}
-      </div>
-
-      {/* Evolution */}
-      <div className="grid grid-cols-1 gap-6 mb-6">
-        {isLoading ? (
-          <CardSkeleton />
-        ) : (
-          <EvolutionWidget
-            physical={diagnosticScores.physical}
-            technique={diagnosticScores.technique}
-            mental={diagnosticScores.mental}
-            delay={0.4}
-          />
-        )}
+          {logs.length > 0 && <HowYouAreCard weeklyCompliance={weeklyCompliance} energy7={energy7} />}
+        </aside>
       </div>
     </AppLayout>
   );

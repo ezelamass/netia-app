@@ -1,162 +1,138 @@
-import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { Suspense, lazy, memo, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { ArrowRight, Check, MapPin } from 'lucide-react';
 import { useDailyLog } from '@/hooks/useDailyLog';
-import { useWellnessStatus, INDICATORS, STATUS_COLORS } from '@/hooks/useWellnessStatus';
-import { WellnessIndicator } from './WellnessIndicator';
-import { TodayActionCard } from './TodayActionCard';
-import { StreakBadge } from './StreakBadge';
-import { DailyLogSheet } from './DailyLogSheet';
+import { INDICATORS } from '@/hooks/useWellnessStatus';
+import type { CalendarEvent } from '@/hooks/useCalendarEvents';
+import { getEventIcon, ICONS, type IconKey } from '@/lib/icons';
+import { cn } from '@/lib/utils';
+const DailyLogSheet = lazy(() => import('./DailyLogSheet').then((m) => ({ default: m.DailyLogSheet })));
 
-export const TodayCard = () => {
-  const [showLogSheet, setShowLogSheet] = useState(false);
-  const [initialStep, setInitialStep] = useState(0);
-  
-  const {
-    todayLog,
-    hasLoggedToday,
-    todayAction,
-    addLog,
-    completeTodayAction,
-    getLogsForDays,
-    getStreak,
-    getXP,
-  } = useDailyLog();
+const CHECKIN_ICON: Record<'sleep' | 'hydration' | 'energy' | 'pain', IconKey> = {
+  sleep: 'sleep', hydration: 'hydration', energy: 'energy', pain: 'pain',
+};
 
-  const {
-    status,
-    statusMessage,
-    statusColors,
-    getIndicatorStatus,
-    getIndicatorValue,
-  } = useWellnessStatus(todayLog);
+const STATUS_TEXT = { ok: 'text-[hsl(160_84%_20%)]', warning: 'text-[hsl(32_95%_26%)]', critical: 'text-[hsl(350_80%_32%)]', unknown: 'text-[hsl(16_30%_22%)]' } as const;
 
-  const historicalData = useMemo(() => {
-    const logs = getLogsForDays(7);
-    return {
-      sleep: logs.map(l => l.sleep),
-      hydration: logs.map(l => l.hydration),
-      energy: logs.map(l => l.energy),
-      pain: logs.map(l => 10 - l.pain), // Invert for visualization (higher = better)
-    };
-  }, [getLogsForDays]);
+interface TodayCardProps {
+  /** Eventos de hoy (propios + del club), ordenados */
+  todayEvents: CalendarEvent[];
+}
 
-  const streak = getStreak();
-  const xp = getXP();
+/** Próxima actividad que todavía no pasó; si ya pasaron todas, la última del día. */
+const pickNext = (events: CalendarEvent[]): CalendarEvent | null => {
+  if (!events.length) return null;
+  const now = format(new Date(), 'HH:mm');
+  return events.find((e) => !e.startTime || e.startTime >= now) ?? events[events.length - 1];
+};
 
-  const handleIndicatorClick = (index: number) => {
-    setInitialStep(index);
-    setShowLogSheet(true);
-  };
+export const TodayCard = memo(({ todayEvents }: TodayCardProps) => {
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetMounted, setSheetMounted] = useState(false);
+  const [step, setStep] = useState(0);
+  const { todayLog, hasLoggedToday, addLog } = useDailyLog();
 
-  const handleLogSave = (data: Parameters<typeof addLog>[0]) => {
-    addLog(data);
-  };
+  const next = useMemo(() => pickNext(todayEvents.filter((e) => e.type !== 'rest' || todayEvents.length === 1)), [todayEvents]);
+  const nextIcon = next ? getEventIcon(next.type) : null;
+  const isTraining = next?.type === 'training';
 
-  const today = new Date();
-  const formattedDate = format(today, "EEEE, d 'de' MMMM", { locale: es });
+  const open = (i: number) => { setStep(i); setSheetMounted(true); setSheetOpen(true); };
 
   return (
-    <>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className={cn(
-          "relative overflow-hidden rounded-2xl border-2 p-5",
-          "bg-background/80 backdrop-blur-md",
-          "shadow-lg",
-          statusColors.border,
-          statusColors.glow,
-          status === 'green' && "shadow-emerald-500/10",
-          status === 'yellow' && "shadow-yellow-500/10",
-          status === 'red' && "shadow-red-500/10"
-        )}
-      >
-        {/* Status glow effect */}
-        <div className={cn(
-          "absolute inset-0 opacity-20 pointer-events-none",
-          status === 'green' && "bg-gradient-to-br from-emerald-500/30 to-transparent",
-          status === 'yellow' && "bg-gradient-to-br from-yellow-500/30 to-transparent",
-          status === 'red' && "bg-gradient-to-br from-red-500/30 to-transparent"
-        )} />
-
-        {/* Header */}
-        <div className="relative flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            {/* Semáforo */}
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-              className={cn(
-                "w-4 h-4 rounded-full",
-                status === 'green' && "bg-emerald-500",
-                status === 'yellow' && "bg-yellow-500",
-                status === 'red' && "bg-red-500"
+    <section
+      aria-label="Hoy"
+      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-orange to-[hsl(26_100%_66%)] p-4 text-[hsl(16_60%_10%)] shadow-card md:p-5"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wide text-[hsl(16_60%_16%)]">
+            Hoy{next?.startTime ? ` · ${next.startTime}` : ''}
+          </p>
+          {next && nextIcon ? (
+            <>
+              <h2 className="mt-1 font-heading text-2xl font-bold leading-tight">{next.title}</h2>
+              {next.location && (
+                <p className="mt-1 flex items-center gap-1 text-sm font-medium">
+                  <MapPin className="h-4 w-4" aria-hidden="true" />{next.location}
+                </p>
               )}
-            />
-            <div>
-              <p className="text-sm text-muted-foreground capitalize">{formattedDate}</p>
-              <h3 className={cn("font-semibold", statusColors.text)}>{statusMessage}</h3>
-            </div>
-          </div>
-
-          {!hasLoggedToday && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowLogSheet(true)}
-              className="gap-1"
-            >
-              <Plus className="w-4 h-4" />
-              Registrar
-            </Button>
+            </>
+          ) : (
+            <>
+              <h2 className="mt-1 font-heading text-2xl font-bold leading-tight">Hoy es día libre</h2>
+              <p className="mt-1 text-sm font-medium">Descansá y contanos cómo estás.</p>
+            </>
           )}
         </div>
+        <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/70">
+          {nextIcon ? <nextIcon.icon className="h-5 w-5 text-primary" strokeWidth={2} /> : <ICONS.rest.icon className="h-5 w-5 text-primary" strokeWidth={2} />}
+        </span>
+      </div>
 
-        {/* Wellness Indicators */}
-        <div className="relative grid grid-cols-4 gap-2 mb-4">
-          {INDICATORS.map((indicator, index) => (
-            <WellnessIndicator
-              key={indicator.key}
-              indicator={indicator}
-              value={getIndicatorValue(indicator)}
-              status={getIndicatorStatus(indicator)}
-              historicalData={historicalData[indicator.key]}
-              onClick={() => handleIndicatorClick(index)}
-              delay={0.1 + index * 0.05}
-            />
-          ))}
-        </div>
+      <div className="mt-3">
+        {next ? (
+          <Link
+            to={isTraining ? '/training' : '/calendar'}
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-primary shadow-sm transition-colors duration-150 hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            {isTraining ? 'Empezar entrenamiento' : 'Ver en calendario'}
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => open(0)}
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-primary shadow-sm transition-colors duration-150 hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            Registrar mi día
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
+      </div>
 
-        {/* Divider */}
-        <div className="relative flex items-center gap-2 my-4">
-          <div className="flex-1 h-px bg-border" />
-          <span className="text-xs text-muted-foreground px-2">📋 ACCIÓN DEL DÍA</span>
-          <div className="flex-1 h-px bg-border" />
-        </div>
+      <div className="mt-4 rounded-2xl bg-white/60 p-2">
+        <ul className="grid grid-cols-4 gap-1">
+          {INDICATORS.map((ind, i) => {
+            const meta = ICONS[CHECKIN_ICON[ind.key]];
+            const status = todayLog ? ind.getStatus(todayLog) : 'unknown';
+            return (
+              <li key={ind.key}>
+                <button
+                  type="button"
+                  onClick={() => open(i)}
+                  className="flex w-full flex-col items-center gap-0.5 rounded-xl px-1 py-2 transition-colors duration-150 hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-label={`${ind.label}: ${todayLog ? ind.getValue(todayLog) : 'sin registrar'}. Tocá para cargar`}
+                >
+                  <meta.icon className="h-[18px] w-[18px] text-primary" strokeWidth={2} aria-hidden="true" />
+                  <span className={cn('text-sm font-bold tabular-nums', STATUS_TEXT[status])}>
+                    {todayLog ? ind.getValue(todayLog) : '—'}
+                  </span>
+                  <span className="text-[11px] font-medium text-[hsl(16_30%_22%)]">{ind.label}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {hasLoggedToday && (
+          <p className="mt-1 flex items-center justify-center gap-1 pb-1 text-xs font-semibold text-[hsl(160_84%_20%)]">
+            <Check className="h-4 w-4" aria-hidden="true" />Día registrado · +20 XP
+          </p>
+        )}
+      </div>
 
-        {/* Today's Action */}
-        <TodayActionCard
-          action={todayAction}
-          onComplete={completeTodayAction}
-        />
-
-        {/* Streak and XP */}
-        <StreakBadge streak={streak} xp={xp} />
-      </motion.div>
-
-      {/* Daily Log Sheet */}
-      <DailyLogSheet
-        open={showLogSheet}
-        onClose={() => setShowLogSheet(false)}
-        onSave={handleLogSave}
-        initialStep={initialStep}
-      />
-    </>
+      {sheetMounted && (
+        <Suspense fallback={null}>
+          <DailyLogSheet
+            open={sheetOpen}
+            onClose={() => setSheetOpen(false)}
+            onSave={(data) => addLog(data)}
+            initialStep={step}
+          />
+        </Suspense>
+      )}
+    </section>
   );
-};
+});
+TodayCard.displayName = 'TodayCard';
+

@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { Bell } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,9 +14,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { NotificationPanel } from './NotificationPanel';
+const NotificationPanel = lazy(() => import('./NotificationPanel').then((m) => ({ default: m.NotificationPanel })));
 import { useNotifications } from '@/hooks/useNotifications';
-import { useNotificationGenerator } from '@/hooks/useNotificationGenerator';
+const NotificationGeneratorRunner = lazy(() => import('./NotificationGeneratorRunner'));
 import { useIsMobile } from '@/hooks/use-mobile';
 
 export const NotificationBell = () => {
@@ -33,8 +32,15 @@ export const NotificationBell = () => {
     addNotification,
   } = useNotifications();
 
-  // Initialize the notification generator
-  useNotificationGenerator({ addNotification });
+  // El generador (que trae hooks de calendario y registro diario) arranca recién con el navegador ocioso.
+  const [generatorReady, setGeneratorReady] = useState(false);
+  useEffect(() => {
+    const w = window as Window & { requestIdleCallback?: (cb: () => void) => number; cancelIdleCallback?: (id: number) => void };
+    const go = () => setGeneratorReady(true);
+    if (w.requestIdleCallback) { const id = w.requestIdleCallback(go); return () => w.cancelIdleCallback?.(id); }
+    const id = window.setTimeout(go, 3000);
+    return () => window.clearTimeout(id);
+  }, []);
 
   const handleClose = () => setIsOpen(false);
 
@@ -51,36 +57,30 @@ export const NotificationBell = () => {
       )} />
       
       {/* Badge */}
-      <AnimatePresence>
-        {unreadCount > 0 && (
-          <motion.span
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0 }}
+      {unreadCount > 0 && (
+          <span
             className={cn(
-              "absolute flex items-center justify-center",
+              "animate-in zoom-in-50 duration-150 motion-reduce:animate-none absolute flex items-center justify-center",
               "min-w-[18px] h-[18px] px-1 text-[10px] font-bold",
               "bg-destructive text-destructive-foreground rounded-full",
               "-top-0.5 -right-0.5"
             )}
           >
             {unreadCount > 9 ? '9+' : unreadCount}
-          </motion.span>
-        )}
-      </AnimatePresence>
-
-      {/* Pulse animation for new notifications */}
-      {unreadCount > 0 && (
-        <span className="absolute top-0 right-0 w-3 h-3">
-          <span className="absolute inline-flex h-full w-full rounded-full bg-destructive/40 animate-ping" />
-        </span>
+          </span>
       )}
     </Button>
   );
 
+  const generator = generatorReady ? (
+    <Suspense fallback={null}><NotificationGeneratorRunner addNotification={addNotification} /></Suspense>
+  ) : null;
+
   // Mobile: Use Sheet (bottom drawer)
   if (isMobile) {
     return (
+      <>
+      {generator}
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild>
           {bellButton}
@@ -89,6 +89,7 @@ export const NotificationBell = () => {
           <SheetHeader className="sr-only">
             <SheetTitle>Notificaciones</SheetTitle>
           </SheetHeader>
+          <Suspense fallback={<div className="h-40" />}>
           <NotificationPanel
             groupedNotifications={groupedNotifications}
             unreadCount={unreadCount}
@@ -98,13 +99,17 @@ export const NotificationBell = () => {
             onClearAllRead={clearAllRead}
             onClose={handleClose}
           />
+          </Suspense>
         </SheetContent>
       </Sheet>
+      </>
     );
   }
 
   // Desktop: Use Popover (dropdown)
   return (
+    <>
+    {generator}
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         {bellButton}
@@ -114,6 +119,7 @@ export const NotificationBell = () => {
         className="w-96 p-0 overflow-hidden"
         sideOffset={8}
       >
+        <Suspense fallback={<div className="h-40" />}>
         <NotificationPanel
           groupedNotifications={groupedNotifications}
           unreadCount={unreadCount}
@@ -123,7 +129,9 @@ export const NotificationBell = () => {
           onClearAllRead={clearAllRead}
           onClose={handleClose}
         />
+        </Suspense>
       </PopoverContent>
     </Popover>
+    </>
   );
 };
