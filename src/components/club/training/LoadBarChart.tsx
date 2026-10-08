@@ -16,7 +16,7 @@ interface LoadBarChartProps {
 
 export function LoadBarChart({ data }: LoadBarChartProps) {
   const chartData = data.map(d => ({
-    name: CATEGORY_LABELS[d.category],
+    name: CATEGORY_LABELS[d.category] ?? d.category,
     minutos: d.minutes,
     rpe: d.rpe,
     sesiones: d.sessions,

@@ -1,7 +1,7 @@
 import { TrainingSession } from '@/types/training';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { SESSION_TYPE_LABELS, SESSION_TYPE_COLORS } from '@/types/training';
+import { getSessionTypeLabel, SESSION_TYPE_COLORS } from '@/types/training';
 import {
   Table,
   TableBody,
@@ -61,10 +61,10 @@ export function SessionsTable({ sessions }: SessionsTableProps) {
                   variant="secondary"
                   className={cn(
                     'text-white',
-                    SESSION_TYPE_COLORS[session.type]
+                    SESSION_TYPE_COLORS[session.type] ?? 'bg-gray-500'
                   )}
                 >
-                  {SESSION_TYPE_LABELS[session.type]}
+                  {getSessionTypeLabel(session.type)}
                 </Badge>
               </TableCell>
               <TableCell className="text-center">{session.duration} min</TableCell>

@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Check, Dumbbell, Moon, Swords, Target, Zap, Heart, type LucideIcon } from 'lucide-react';
 import type { DaySession } from '@/hooks/useTrainingPlan';
-import { SESSION_TYPE_LABELS, type SessionType } from '@/types/training';
+import { getSessionTypeLabel, type SessionType } from '@/types/training';
 import { cn } from '@/lib/utils';
 
 const TYPE_ICON: Record<SessionType | 'rest', LucideIcon> = {
@@ -26,8 +26,8 @@ export const WeeklyMicrocycle = memo(({ sessions, selectedDay, onSelectDay }: Pr
       const done = s.status === 'completed' && !rest;
       const today = s.status === 'today';
       const sel = selectedDay === s.dayIndex;
-      const Icon = done ? Check : TYPE_ICON[s.type];
-      const label = rest ? 'Descanso' : SESSION_TYPE_LABELS[s.type as SessionType];
+      const Icon = done ? Check : (Object.prototype.hasOwnProperty.call(TYPE_ICON, s.type) ? TYPE_ICON[s.type] : Target);
+      const label = rest ? 'Descanso' : getSessionTypeLabel(s.type);
       return (
         <button
           key={s.dayIndex}

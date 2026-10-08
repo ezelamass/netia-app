@@ -6,7 +6,9 @@ import {
   getTimeGroup, 
   TimeGroup,
   TIME_GROUP_LABELS,
-  NotificationGroup 
+  NotificationGroup,
+  normalizeNotificationType,
+  normalizeNotificationPriority,
 } from '@/types/notification';
 
 const MAX_NOTIFICATIONS = 50;
@@ -40,14 +42,14 @@ export const useNotifications = (): UseNotificationsReturn => {
     if (!error && data) {
       setNotifications(data.map((row: any) => ({
         id: row.id,
-        type: row.type,
+        type: normalizeNotificationType(row.type),
         title: row.title,
         description: row.description,
         timestamp: new Date(row.created_at),
         isRead: row.is_read,
         avatar: row.avatar || undefined,
         actionUrl: row.action_url || undefined,
-        priority: row.priority,
+        priority: normalizeNotificationPriority(row.priority),
         metadata: row.metadata || undefined,
       })));
     }
@@ -139,14 +141,14 @@ export const useNotifications = (): UseNotificationsReturn => {
     if (!error && data) {
       const newNotif: Notification = {
         id: data.id,
-        type: data.type as any,
+        type: normalizeNotificationType(data.type),
         title: data.title,
         description: data.description,
         timestamp: new Date(data.created_at),
         isRead: false,
         avatar: data.avatar as any,
         actionUrl: data.action_url || undefined,
-        priority: data.priority as any,
+        priority: normalizeNotificationPriority(data.priority),
         metadata: data.metadata as any,
       };
       setNotifications(prev => [newNotif, ...prev].slice(0, MAX_NOTIFICATIONS));
