@@ -289,7 +289,8 @@ All colors MUST be HSL.
   }
 }
 
-/* Movimiento: con "reducir movimiento" no hay desplazamientos, escalas ni loops; solo fades cortos. */
+/* Movimiento: con "reducir movimiento" no hay desplazamientos, escalas ni loops; las entradas pasan a un fade de 120 ms. */
+@keyframes rm-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -297,7 +298,9 @@ All colors MUST be HSL.
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .motion-fade-only { transition: opacity 120ms linear !important; }
+  .animate-fade-up, .animate-pop-in, .animate-bubble-in-left, .animate-bubble-in-right, .animate-slide-in-right {
+    animation: rm-fade 120ms linear backwards !important;
+  }
 }
 
 @layer components {
