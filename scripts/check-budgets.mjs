@@ -17,7 +17,8 @@ const size = (file) => {
   return gz.get(file);
 };
 
-const byName = (re) => Object.entries(manifest).find(([k]) => re.test(k))?.[1];
+// Una página puede quedar con clave `_Nombre-hash.js` si otro chunk importa algo de ella: se busca por clave o por nombre.
+const byName = (re) => Object.entries(manifest).find(([k, c]) => re.test(k) || (c.isDynamicEntry && re.test(`pages/${c.name}.tsx`)))?.[1];
 const entry = Object.values(manifest).find((c) => c.isEntry);
 
 /** Archivos JS cargados estáticamente por un chunk (él + sus imports, recursivo). */

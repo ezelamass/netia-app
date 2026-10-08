@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useEffect, useMemo, useCallback, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { PlayerStats, Badge, calculateLevel, getNextLevelXP, LEVEL_THRESHOLDS, PlayerLevel } from '@/types/gamification';
@@ -10,48 +11,54 @@ interface BadgeWithProgress extends Badge {
   progress: number;
 }
 
+type DbBadge = { id: string; title: string; description: string; icon: string; category: string; requirement: number; xp_reward: number };
+
+interface GamificationData {
+  stats: PlayerStats | null;
+  dbBadges: DbBadge[];
+  earned: Array<{ badge_id: string; earned_at?: string | null }>;
+}
+
+const EMPTY_BADGES: DbBadge[] = [];
+const EMPTY_EARNED: GamificationData['earned'] = [];
+
+async function fetchGamification(userId: string): Promise<GamificationData> {
+  const [statsRes, badgesRes, earnedRes] = await Promise.all([
+    supabase.from('player_stats').select('*').eq('user_id', userId).maybeSingle(),
+    supabase.from('badges').select('*'),
+    supabase.from('player_badges').select('badge_id, earned_at').eq('user_id', userId),
+  ]);
+  return {
+    stats: !statsRes.error && statsRes.data ? {
+      xp: statsRes.data.xp,
+      level: statsRes.data.level as PlayerLevel,
+      currentStreak: statsRes.data.current_streak,
+      longestStreak: statsRes.data.longest_streak,
+      totalLogs: statsRes.data.total_logs,
+      totalTrainingMin: statsRes.data.total_training_min,
+      badges: [],
+    } : null,
+    dbBadges: !badgesRes.error && badgesRes.data ? (badgesRes.data as unknown as DbBadge[]) : EMPTY_BADGES,
+    earned: !earnedRes.error && earnedRes.data ? earnedRes.data : EMPTY_EARNED,
+  };
+}
+
 export const useGamification = () => {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const { logs, getStreak, getXP } = useDailyLog();
-  const [stats, setStats] = useState<PlayerStats | null>(null);
-  const [dbBadges, setDbBadges] = useState<Array<{ id: string; title: string; description: string; icon: string; category: string; requirement: number; xp_reward: number }>>([]);
-  const [earnedBadgeIds, setEarnedBadgeIds] = useState<Set<string>>(new Set());
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchData = useCallback(async () => {
-    if (!user) { setStats(null); setIsLoading(false); return; }
-
-    // Fetch stats, badges catalog, and earned badges in parallel
-    const [statsRes, badgesRes, earnedRes] = await Promise.all([
-      supabase.from('player_stats').select('*').eq('user_id', user.id).maybeSingle(),
-      supabase.from('badges').select('*'),
-      supabase.from('player_badges').select('badge_id').eq('user_id', user.id),
-    ]);
-
-    if (!statsRes.error && statsRes.data) {
-      setStats({
-        xp: statsRes.data.xp,
-        level: statsRes.data.level as PlayerLevel,
-        currentStreak: statsRes.data.current_streak,
-        longestStreak: statsRes.data.longest_streak,
-        totalLogs: statsRes.data.total_logs,
-        totalTrainingMin: statsRes.data.total_training_min,
-        badges: [],
-      });
-    }
-
-    if (!badgesRes.error && badgesRes.data) {
-      setDbBadges(badgesRes.data as any);
-    }
-
-    if (!earnedRes.error && earnedRes.data) {
-      setEarnedBadgeIds(new Set(earnedRes.data.map((r: any) => r.badge_id)));
-    }
-
-    setIsLoading(false);
-  }, [user]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
+  const query = useQuery({
+    queryKey: ['gamification', user?.id],
+    queryFn: () => fetchGamification(user!.id),
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+  const stats = query.data?.stats ?? null;
+  const dbBadges = query.data?.dbBadges ?? EMPTY_BADGES;
+  const earned = query.data?.earned ?? EMPTY_EARNED;
+  const earnedBadgeIds = useMemo(() => new Set(earned.map((r) => r.badge_id)), [earned]);
+  const isLoading = !!user && query.isLoading;
+  const attempted = useRef<Set<string>>(new Set());
 
   // Calculate badge progress from local data
   const badgeProgress = useMemo((): BadgeWithProgress[] => {
@@ -92,21 +99,18 @@ export const useGamification = () => {
   // Auto-award badges
   const awardNewBadges = useCallback(async () => {
     if (!user) return;
-    const newlyEarned = badgeProgress.filter(b => b.isUnlocked && !earnedBadgeIds.has(b.id));
+    const newlyEarned = badgeProgress.filter(b => b.isUnlocked && !earnedBadgeIds.has(b.id) && !attempted.current.has(b.id));
     if (newlyEarned.length === 0) return;
 
     for (const badge of newlyEarned) {
+      attempted.current.add(badge.id);
       await supabase.from('player_badges').upsert(
         { user_id: user.id, badge_id: badge.id },
         { onConflict: 'user_id,badge_id' }
       );
     }
-    setEarnedBadgeIds(prev => {
-      const next = new Set(prev);
-      newlyEarned.forEach(b => next.add(b.id));
-      return next;
-    });
-  }, [user, badgeProgress, earnedBadgeIds]);
+    qc.invalidateQueries({ queryKey: ['gamification', user.id] });
+  }, [user, badgeProgress, earnedBadgeIds, qc]);
 
   useEffect(() => { awardNewBadges(); }, [awardNewBadges]);
 
@@ -137,7 +141,7 @@ export const useGamification = () => {
   }, [user, logs, getStreak, getXP, stats]);
 
   return {
-    stats, isLoading, badgeProgress, currentLevel, currentXP,
+    stats, isLoading, badgeProgress, earned, currentLevel, currentXP,
     nextLevelXP, levelProgress, syncStats,
     unlockedCount: badgeProgress.filter(b => b.isUnlocked).length,
     totalBadges: dbBadges.length,

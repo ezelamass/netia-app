@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { startOfDay, isSameDay, subDays, isAfter, format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,11 +37,35 @@ const getTodayAction = (): TodayAction => {
   return actions[Math.floor(Math.random() * actions.length)];
 };
 
+const EMPTY_LOGS: DailyLog[] = [];
+
+async function fetchDailyLogs(userId: string): Promise<DailyLog[]> {
+  const cutoff = subDays(new Date(), 60);
+  const { data, error } = await supabase
+    .from('daily_logs')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('log_date', format(cutoff, 'yyyy-MM-dd'))
+    .order('log_date', { ascending: true });
+  if (error || !data) return [];
+  return data.map((row) => ({
+    id: row.id,
+    date: new Date(row.log_date),
+    sleep: Number(row.sleep_hours) || 0,
+    hydration: Number(row.hydration_liters) || 0,
+    energy: (row.energy_level || 3) as 1 | 2 | 3 | 4 | 5,
+    pain: row.pain_level || 0,
+    painLocation: row.pain_location || undefined,
+    trained: row.trained || false,
+    trainingDurationMin: row.training_duration_min || 0,
+    completedAt: new Date(row.created_at),
+  }));
+}
+
 export const useDailyLog = () => {
   const { user } = useAuth();
   const { blockIfDemo } = useDemoGuard();
-  const [logs, setLogs] = useState<DailyLog[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const qc = useQueryClient();
   const [todayAction, setTodayAction] = useState<TodayAction>(() => {
     const stored = localStorage.getItem('netia-today-action');
     if (stored) { try { return JSON.parse(stored); } catch { return getTodayAction(); } }
@@ -51,36 +76,16 @@ export const useDailyLog = () => {
     localStorage.setItem('netia-today-action', JSON.stringify(todayAction));
   }, [todayAction]);
 
-  // Fetch logs from Supabase
-  const fetchLogs = useCallback(async () => {
-    if (!user) { setLogs([]); setIsLoading(false); return; }
-    
-    const cutoff = subDays(new Date(), 60);
-    const { data, error } = await supabase
-      .from('daily_logs')
-      .select('*')
-      .eq('user_id', user.id)
-      .gte('log_date', format(cutoff, 'yyyy-MM-dd'))
-      .order('log_date', { ascending: true });
-
-    if (!error && data) {
-      setLogs(data.map((row: any) => ({
-        id: row.id,
-        date: new Date(row.log_date),
-        sleep: Number(row.sleep_hours) || 0,
-        hydration: Number(row.hydration_liters) || 0,
-        energy: (row.energy_level || 3) as 1 | 2 | 3 | 4 | 5,
-        pain: row.pain_level || 0,
-        painLocation: row.pain_location || undefined,
-        trained: row.trained || false,
-        trainingDurationMin: row.training_duration_min || 0,
-        completedAt: new Date(row.created_at),
-      })));
-    }
-    setIsLoading(false);
-  }, [user]);
-
-  useEffect(() => { fetchLogs(); }, [fetchLogs]);
+  // Con caché: al volver a Inicio los datos aparecen al instante y se refrescan de fondo.
+  const logsQuery = useQuery({
+    queryKey: ['daily_logs', user?.id],
+    queryFn: () => fetchDailyLogs(user!.id),
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+  const logs = logsQuery.data ?? EMPTY_LOGS;
+  const isLoading = !!user && logsQuery.isLoading;
+  const fetchLogs = () => qc.invalidateQueries({ queryKey: ['daily_logs', user?.id] });
 
   const today = startOfDay(new Date());
 

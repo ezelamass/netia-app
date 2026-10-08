@@ -142,7 +142,7 @@ export function buildInitialMockData(): MockDataset {
     clubs: [
       {
         id: DEMO_CLUB_ID,
-        name: 'Club Atlético Demo',
+        name: 'Club Los Ceibos',
         sport: 'tennis',
         city: 'Buenos Aires',
         country: 'Argentina',
@@ -325,7 +325,7 @@ export function buildInitialMockData(): MockDataset {
           start_time: start.toISOString(),
           end_time: end.toISOString(),
           description: desc,
-          location: 'Club Atlético Demo',
+          location: 'Club Los Ceibos',
           is_recurring: false,
           created_at: isoAt(-30),
         };
@@ -335,6 +335,18 @@ export function buildInitialMockData(): MockDataset {
       events.push(evt(4, 16, 0, 90, 'Entrenamiento Tenis', 'training', 'Táctica y match play'));
       events.push(evt(5, 10, 0, 120, 'Partido amistoso', 'tournament', 'Vs Club San Isidro'));
       events.push(evt(6, 9, 0, 60, 'Descanso activo', 'rest', 'Movilidad y stretching'));
+      // Eventos del club (creados por el cuerpo técnico; los ve todo el que está inscripto)
+      const clubEvt = (offset: number, h: number, m: number, durationMin: number, title: string, type: string, desc: string, location = 'Club Los Ceibos') => ({
+        ...evt(offset, h, m, durationMin, title, type, desc),
+        id: `club-evt-${offset}-${h}`,
+        user_id: COACH_ID,
+        club_id: DEMO_CLUB_ID,
+        location,
+      });
+      events.push(clubEvt(1, 18, 0, 90, 'Entrenamiento Sub-14', 'training', 'Categoría completa, cancha 2'));
+      events.push(clubEvt(3, 19, 30, 60, 'Reunión de padres', 'school', 'Calendario del torneo y cuotas', 'Quincho del club'));
+      events.push(clubEvt(5, 15, 0, 120, 'Partido vs. San Isidro', 'tournament', 'Torneo de la zona, llegar 14:15', 'Cancha central'));
+      events.push(clubEvt(7, 17, 0, 90, 'Clínica de saque', 'training', 'Con el profe Martín, todas las categorías'));
       return events;
     })(),
 

@@ -26,7 +26,10 @@
 
 .dark [data-skin="play"],
 .dark[data-skin="play"] {
-  --primary: 16 88% 44%;
+  /* En oscuro el naranja sube de luminosidad y el texto sobre él pasa a oscuro (contraste ≥ 4.5:1 en ambos sentidos) */
+  --primary: 16 90% 58%;
+  --primary-foreground: 16 60% 8%;
+  --ring: 16 90% 58%;
   --primary-soft: 16 45% 16%;
   --accent: 16 30% 18%;
   --accent-foreground: 24 100% 90%;

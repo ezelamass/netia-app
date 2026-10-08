@@ -12,6 +12,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useHaptic } from '@/hooks/useHaptic';
 import { DailyLog } from '@/hooks/useDailyLog';
 import { toast } from 'sonner';
+import { ICONS, type IconKey } from '@/lib/icons';
+import { IconBadge } from '@/components/play/IconBadge';
 
 interface DailyLogSheetProps {
   open: boolean;
@@ -20,11 +22,11 @@ interface DailyLogSheetProps {
   initialStep?: number;
 }
 
-const STEPS = [
-  { key: 'sleep', title: '¿Cuántas horas dormiste anoche?', emoji: '😴' },
-  { key: 'hydration', title: '¿Cuánta agua tomaste ayer?', emoji: '💧' },
-  { key: 'energy', title: '¿Cómo te sentís hoy?', emoji: '⚡' },
-  { key: 'pain', title: '¿Tenés alguna molestia física?', emoji: '🦵' },
+const STEPS: Array<{ key: IconKey; title: string }> = [
+  { key: 'sleep', title: '¿Cuántas horas dormiste anoche?' },
+  { key: 'hydration', title: '¿Cuánta agua tomaste ayer?' },
+  { key: 'energy', title: '¿Cómo te sentís hoy?' },
+  { key: 'pain', title: '¿Tenés alguna molestia física?' },
 ];
 
 const SLEEP_EMOJIS = ['😫', '😫', '😔', '😐', '😐', '😊', '😊', '🤩', '🤩'];
@@ -168,7 +170,7 @@ export const DailyLogSheet = ({ open, onClose, onSave, initialStep = 0 }: DailyL
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-2">
-          <span className="text-2xl">{STEPS[step].emoji}</span>
+          <IconBadge icon={ICONS[STEPS[step].key].icon} tone={ICONS[STEPS[step].key].tone} />
           <span className="font-semibold text-sm">
             Paso {step + 1} de {STEPS.length}
           </span>
@@ -344,7 +346,7 @@ export const DailyLogSheet = ({ open, onClose, onSave, initialStep = 0 }: DailyL
             </Button>
           )}
           <Button onClick={handleNext} className="flex-1">
-            {step === STEPS.length - 1 ? 'Guardar ✓' : 'Siguiente'}
+            {step === STEPS.length - 1 ? 'Guardar' : 'Siguiente'}
             {step < STEPS.length - 1 && <ChevronRight className="w-4 h-4 ml-1" />}
           </Button>
         </div>

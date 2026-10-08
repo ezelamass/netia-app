@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -22,32 +23,39 @@ export interface Club {
   isActive: boolean;
 }
 
+const EMPTY: Enrollment[] = [];
+
+async function fetchEnrollmentsFor(userId: string): Promise<Enrollment[]> {
+  const { data, error } = await supabase
+    .from('enrollments')
+    .select('*, clubs(name, logo_url, city, sport)')
+    .eq('user_id', userId);
+  if (error || !data) return EMPTY;
+  return data.map((row) => ({
+    id: row.id,
+    clubId: row.club_id,
+    clubName: (row as { clubs?: { name?: string } }).clubs?.name || 'Club',
+    role: row.role,
+    status: row.status,
+    joinedAt: new Date(row.joined_at),
+  }));
+}
+
 export const useEnrollment = () => {
   const { user } = useAuth();
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const fetchEnrollments = useCallback(async () => {
-    if (!user) return;
-    setIsLoading(true);
-    
-    const { data, error } = await supabase
-      .from('enrollments')
-      .select('*, clubs(name, logo_url, city, sport)')
-      .eq('user_id', user.id);
-
-    if (!error && data) {
-      setEnrollments(data.map((row: any) => ({
-        id: row.id,
-        clubId: row.club_id,
-        clubName: row.clubs?.name || 'Club',
-        role: row.role,
-        status: row.status,
-        joinedAt: new Date(row.joined_at),
-      })));
-    }
-    setIsLoading(false);
-  }, [user]);
+  const qc = useQueryClient();
+  const query = useQuery({
+    queryKey: ['enrollments', user?.id],
+    queryFn: () => fetchEnrollmentsFor(user!.id),
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+  const enrollments = query.data ?? EMPTY;
+  const isLoading = !!user && query.isLoading;
+  const fetchEnrollments = useCallback(
+    () => qc.invalidateQueries({ queryKey: ['enrollments', user?.id] }),
+    [qc, user?.id],
+  );
 
   const joinClubByCode = async (inviteCode: string) => {
     if (!user) { toast.error('Debes iniciar sesión'); return false; }
