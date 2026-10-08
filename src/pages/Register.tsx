@@ -22,12 +22,11 @@ const sportsQuotes = [
   "No te detengas cuando estés cansado, detente cuando hayas terminado - Anónimo",
 ];
 
-type RegisterRole = 'player' | 'parent' | 'coach';
+type RegisterRole = 'player' | 'parent';
 
 const roleLabels: Record<RegisterRole, string> = {
   player: 'Jugador',
   parent: 'Familia',
-  coach: 'Entrenador',
 };
 
 const Register = () => {
