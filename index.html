@@ -14,13 +14,15 @@
     -->
     <meta name="google" content="notranslate" />
     <script>
-      // Dark mode al boot (evita parpadeo): lee netia_settings y cae a prefers-color-scheme
+      // Dark mode al boot (evita parpadeo): solo si netia_settings lo pide
       (function () {
         try {
-          var t = 'system';
+          var t = 'light';
           var raw = localStorage.getItem('netia_settings');
           if (raw) { var a = JSON.parse(raw).appearance; if (a && a.theme) t = a.theme; }
-          var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          // Blanco por defecto: solo modo oscuro si la persona lo eligió, y nunca en las páginas públicas.
+          var pub = /^\/(clubes|login|register)?\/?$/.test(location.pathname);
+          var dark = t === 'dark' && !pub;
           if (dark) document.documentElement.classList.add('dark');
         } catch (e) {}
       })();

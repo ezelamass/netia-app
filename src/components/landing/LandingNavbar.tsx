@@ -1,73 +1,113 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Menu, X, Play, Building2 } from 'lucide-react';
 
 const navLinks = [
-  { label: 'Producto', href: '#producto' },
-  { label: 'Para quién', href: '#para-quien' },
-  { label: 'Precios', href: '#planes' },
-  { label: 'FAQ', href: '#faq' },
+  { label: 'Nosotros', href: '#nosotros' },
+  { label: 'Campus', href: '#campus' },
+  { label: 'Avatares', href: '#avatares' },
+  { label: 'Planes', href: '/clubes#planes' },
 ];
 
-interface Props {
-  onContactClick: () => void;
+interface LandingNavbarProps {
+  onDemoClick?: () => void;
 }
 
-const LandingNavbar = ({ onContactClick }: Props) => {
-  const [open, setOpen] = useState(false);
+const LandingNavbar = ({ onDemoClick }: LandingNavbarProps) => {
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/85 backdrop-blur">
-      <nav aria-label="Principal" className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        <Link to="/" className="flex items-center gap-2" aria-label="NETIA, inicio">
-          <img src="/logo.png" alt="" width={32} height={32} className="h-8 w-8 rounded-md" />
-          <span className="font-heading text-xl font-bold">NETIA</span>
+    <nav className="w-full bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
+        {/* Logo */}
+        <Link to="/" className="text-2xl font-heading font-bold text-secondary">
+          Netia
         </Link>
 
-        <div className="hidden items-center gap-7 md:flex">
-          {navLinks.map((l) => (
-            <a key={l.href} href={l.href} className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-              {l.label}
+        {/* Desktop nav links */}
+        <div className="hidden md:flex items-center gap-8">
+          {navLinks.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="text-[18px] font-medium text-foreground hover:text-secondary transition-colors"
+            >
+              {link.label}
             </a>
           ))}
         </div>
 
-        <div className="hidden items-center gap-2 md:flex">
-          <Button variant="ghost" asChild><Link to="/login">Ingresar</Link></Button>
-          <Button variant="outline" onClick={onContactClick}>Contacto</Button>
-          <Button asChild><Link to="/demo">Probá la demo</Link></Button>
+        {/* Right side */}
+        <div className="hidden md:flex items-center gap-4">
+          <Link to="/clubes">
+            <Button variant="ghost" className="rounded-full px-4 py-2 text-sm font-medium gap-1.5 text-muted-foreground hover:text-foreground">
+              <Building2 className="w-3.5 h-3.5" />
+              Para clubes
+            </Button>
+          </Link>
+          <Button
+            variant="outline"
+            className="rounded-full px-5 py-2 text-sm font-medium gap-1.5 border-secondary text-secondary hover:bg-secondary/10"
+            onClick={onDemoClick}
+          >
+            <Play className="w-3.5 h-3.5" />
+            Probar Demo
+          </Button>
+          <Link to="/register">
+            <Button className="rounded-full px-6 py-2 text-[16px] font-medium">
+              Inscribite
+            </Button>
+          </Link>
         </div>
 
+        {/* Mobile hamburger */}
         <button
-          type="button"
-          className="-mr-2 flex h-11 w-11 items-center justify-center rounded-md md:hidden"
-          aria-expanded={open}
-          aria-controls="landing-mobile-menu"
-          aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
-          onClick={() => setOpen((o) => !o)}
+          className="md:hidden p-2 text-foreground"
+          onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label="Menú"
         >
-          {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
-      </nav>
+      </div>
 
-      {open && (
-        <div id="landing-mobile-menu" className="border-t border-border bg-background px-4 pb-4 md:hidden">
-          <ul className="flex flex-col py-2">
-            {navLinks.map((l) => (
-              <li key={l.href}>
-                <a href={l.href} onClick={() => setOpen(false)} className="flex min-h-11 items-center text-base font-medium">{l.label}</a>
-              </li>
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="md:hidden bg-white border-t px-4 pb-4">
+          <div className="flex flex-col gap-4 pt-4">
+            {navLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-[18px] font-medium text-foreground hover:text-secondary transition-colors"
+                onClick={() => setMobileOpen(false)}
+              >
+                {link.label}
+              </a>
             ))}
-            <li><Link to="/login" className="flex min-h-11 items-center text-base font-medium">Ingresar</Link></li>
-          </ul>
-          <div className="flex flex-col gap-2">
-            <Button asChild className="h-11"><Link to="/demo">Probá la demo</Link></Button>
-            <Button variant="outline" className="h-11" onClick={() => { setOpen(false); onContactClick(); }}>Contacto</Button>
+            <Link to="/clubes" onClick={() => setMobileOpen(false)}>
+              <Button variant="ghost" className="rounded-full w-full text-[16px] font-medium gap-2 text-muted-foreground">
+                <Building2 className="w-4 h-4" />
+                Para clubes
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              className="rounded-full w-full text-[16px] font-medium gap-2 border-secondary text-secondary"
+              onClick={() => { setMobileOpen(false); onDemoClick?.(); }}
+            >
+              <Play className="w-4 h-4" />
+              Probar Demo
+            </Button>
+            <Link to="/register" onClick={() => setMobileOpen(false)}>
+              <Button className="rounded-full w-full text-[16px] font-medium">
+                Inscribite
+              </Button>
+            </Link>
           </div>
         </div>
       )}
-    </header>
+    </nav>
   );
 };
 

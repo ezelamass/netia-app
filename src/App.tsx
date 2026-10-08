@@ -14,6 +14,7 @@ import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
 
 // Public pages
 const LandingPage = lazy(() => import("./pages/LandingPage"));
+const ClubsLandingPage = lazy(() => import("./pages/ClubsLandingPage"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -90,6 +91,7 @@ const App = () => (
                 <Routes>
                   {/* Public routes */}
                   <Route path="/" element={<LandingPage />} />
+                  <Route path="/clubes" element={<ClubsLandingPage />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/demo" element={<Demo />} />
