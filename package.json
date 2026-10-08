@@ -9,8 +9,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "lint:ui": "node scripts/check-ui-bans.mjs",
-    "preview": "vite preview",
-    "seed:demo": "tsx scripts/seed-demo-users.ts"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

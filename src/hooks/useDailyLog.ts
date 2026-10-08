@@ -85,7 +85,11 @@ export const useDailyLog = () => {
   });
   const logs = logsQuery.data ?? EMPTY_LOGS;
   const isLoading = !!user && logsQuery.isLoading;
-  const fetchLogs = () => qc.invalidateQueries({ queryKey: ['daily_logs', user?.id] });
+  const fetchLogs = () => Promise.all([
+    qc.invalidateQueries({ queryKey: ['daily_logs', user?.id] }),
+    qc.invalidateQueries({ queryKey: ['dashboard', user?.id] }),
+    qc.invalidateQueries({ queryKey: ['gamification', user?.id] }),
+  ]);
 
   const today = startOfDay(new Date());
 

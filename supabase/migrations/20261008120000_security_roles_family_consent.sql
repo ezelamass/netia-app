@@ -67,7 +67,13 @@ BEGIN
     RAISE EXCEPTION 'not authenticated';
   END IF;
   IF target <> auth.uid()
-     AND NOT (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'club_admin')) THEN
+     AND NOT (
+       public.has_role(auth.uid(), 'admin')
+       OR (
+         public.has_role(auth.uid(), 'club_admin')
+         AND public.get_user_club_ids(auth.uid()) && public.get_user_club_ids(target)
+       )
+     ) THEN
     RAISE EXCEPTION 'forbidden';
   END IF;
 
@@ -97,6 +103,9 @@ BEGIN
    FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'invalid_or_expired_code';
+  END IF;
+  IF NOT public.has_role(auth.uid(), 'parent') THEN
+    RAISE EXCEPTION 'only_parents_can_redeem';
   END IF;
   IF c.child_id = auth.uid() THEN
     RAISE EXCEPTION 'cannot link to self';
