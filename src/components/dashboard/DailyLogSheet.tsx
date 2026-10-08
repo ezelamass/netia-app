@@ -374,7 +374,7 @@ export const DailyLogSheet = ({ open, onClose, onSave, initialStep = 0 }: DailyL
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-        <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl p-0">
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl p-0 [&>button:last-child]:hidden">
           {content}
         </SheetContent>
       </Sheet>
@@ -383,7 +383,7 @@ export const DailyLogSheet = ({ open, onClose, onSave, initialStep = 0 }: DailyL
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-md p-0 gap-0">
+      <DialogContent className="max-w-md p-0 gap-0 [&>button:last-child]:hidden">
         {content}
       </DialogContent>
     </Dialog>
