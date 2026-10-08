@@ -63,7 +63,7 @@ export const WeekStrip = memo(({ weekStart, selected, onSelect, dotsByDay, onPre
             </>
           );
           const cls = cn(
-            'flex h-16 flex-col items-center justify-center gap-0.5 rounded-xl border text-center transition-colors duration-150',
+            'flex h-16 flex-col items-center justify-center gap-0.5 rounded-xl border text-center transition-[color,background-color,border-color,transform] duration-fast active:scale-[.97]',
             isSel ? 'border-primary bg-primary text-primary-foreground' : 'border-transparent hover:bg-muted',
             !isSel && isToday && 'border-primary/40 bg-primary-soft text-primary',
           );

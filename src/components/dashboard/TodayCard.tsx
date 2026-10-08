@@ -74,7 +74,7 @@ export const TodayCard = memo(({ todayEvents }: TodayCardProps) => {
         {next ? (
           <Link
             to={isTraining ? '/training' : '/calendar'}
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-primary shadow-sm transition-colors duration-150 hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-primary shadow-sm transition-[color,background-color,border-color,transform] duration-fast active:scale-[.97] hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             {isTraining ? 'Empezar entrenamiento' : 'Ver en calendario'}
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -83,7 +83,7 @@ export const TodayCard = memo(({ todayEvents }: TodayCardProps) => {
           <button
             type="button"
             onClick={() => open(0)}
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-primary shadow-sm transition-colors duration-150 hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-primary shadow-sm transition-[color,background-color,border-color,transform] duration-fast active:scale-[.97] hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             Registrar mi día
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -101,7 +101,7 @@ export const TodayCard = memo(({ todayEvents }: TodayCardProps) => {
                 <button
                   type="button"
                   onClick={() => open(i)}
-                  className="flex w-full flex-col items-center gap-0.5 rounded-xl px-1 py-2 transition-colors duration-150 hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="flex w-full flex-col items-center gap-0.5 rounded-xl px-1 py-2 transition-[color,background-color,border-color,transform] duration-fast active:scale-[.97] hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   aria-label={`${ind.label}: ${todayLog ? ind.getValue(todayLog) : 'sin registrar'}. Tocá para cargar`}
                 >
                   <meta.icon className="h-[18px] w-[18px] text-primary" strokeWidth={2} aria-hidden="true" />

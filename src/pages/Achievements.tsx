@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -56,6 +56,27 @@ const Achievements = () => {
   }, [logs]);
 
   const unlockedBadges = badgeProgress.filter(b => b.isUnlocked);
+
+  // Logro desbloqueado: pop-in con spring + confeti chico (importado recién al disparar).
+  // La primera visita no celebra lo que ya estaba: solo lo que se desbloqueó desde la última vez.
+  const [justUnlocked, setJustUnlocked] = useState<ReadonlySet<string>>(new Set());
+  const unlockedKey = unlockedBadges.map(b => b.id).join(',');
+  useEffect(() => {
+    try {
+      const KEY = 'netia_seen_badges';
+      const raw = localStorage.getItem(KEY);
+      const now = unlockedKey ? unlockedKey.split(',') : [];
+      if (raw !== null) {
+        const seen = new Set<string>(JSON.parse(raw));
+        const fresh = now.filter(id => !seen.has(id));
+        if (fresh.length) {
+          setJustUnlocked(new Set(fresh));
+          void import('canvas-confetti').then(m => m.default({ particleCount: 40, spread: 70, origin: { y: 0.35 }, scalar: 0.8, disableForReducedMotion: true }));
+        }
+      }
+      localStorage.setItem(KEY, JSON.stringify(now));
+    } catch { /* sin storage */ }
+  }, [unlockedKey]);
   const lockedBadges = badgeProgress.filter(b => !b.isUnlocked);
 
   return (
@@ -200,7 +221,7 @@ const Achievements = () => {
                     {(tab === 'all' ? badgeProgress : badgeProgress.filter(b => b.category === tab))
                       .sort((a, b) => (b.isUnlocked ? 1 : 0) - (a.isUnlocked ? 1 : 0))
                       .map((badge, i) => (
-                        <BadgeCard key={badge.id} badge={badge} index={i} />
+                        <BadgeCard key={badge.id} badge={badge} index={i} celebrate={justUnlocked.has(badge.id)} />
                       ))}
                   </TabsContent>
                 ))}

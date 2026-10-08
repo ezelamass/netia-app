@@ -36,7 +36,7 @@ export const WeeklyMicrocycle = memo(({ sessions, selectedDay, onSelectDay }: Pr
           aria-pressed={sel}
           aria-label={`${s.dayLabel}: ${label}${done ? ', hecho' : today ? ', hoy' : ''}`}
           className={cn(
-            'flex flex-col items-center gap-1 rounded-xl border px-0.5 py-2 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            'flex flex-col items-center gap-1 rounded-xl border px-0.5 py-2 transition-[color,background-color,border-color,transform] duration-fast active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             sel ? 'border-primary bg-primary text-primary-foreground' : 'border-transparent hover:bg-muted',
             !sel && today && 'border-primary/40 bg-primary-soft text-primary',
           )}

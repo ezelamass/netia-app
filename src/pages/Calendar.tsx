@@ -11,6 +11,9 @@ import { WeekStrip } from '@/components/play/WeekStrip';
 import { MonthView } from '@/components/calendar/MonthView';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Segmented } from '@/components/ui/segmented';
+import { useDelayedFlag } from '@/hooks/useDelayedFlag';
+import { staggerProps, useEnterOnce } from '@/hooks/useEnterOnce';
 import { useCalendarEvents, type CalendarEvent, type EventType } from '@/hooks/useCalendarEvents';
 import { getEventIcon, ICONS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -43,6 +46,8 @@ const Calendar = () => {
   const [adding, setAdding] = useState(false);
 
   const { events, isLoading, addEvent } = useCalendarEvents();
+  const showSkeleton = useDelayedFlag(isLoading);
+  const enter = useEnterOnce('calendar-agenda');
 
   const weekStart = useMemo(() => startOfWeek(selected, { weekStartsOn: 1 }), [selected]);
 
@@ -100,23 +105,12 @@ const Calendar = () => {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <Button variant="outline" size="sm" className="h-8" onClick={() => setSelected(new Date())}>Hoy</Button>
-            <div role="tablist" aria-label="Vista" className="flex rounded-full bg-muted p-0.5">
-              {(['week', 'month'] as const).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  role="tab"
-                  aria-selected={view === v}
-                  onClick={() => setView(v)}
-                  className={cn(
-                    'rounded-full px-3 py-1 text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    view === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground',
-                  )}
-                >
-                  {v === 'week' ? 'Semana' : 'Mes'}
-                </button>
-              ))}
-            </div>
+            <Segmented<View>
+              aria-label="Vista"
+              value={view}
+              onChange={setView}
+              options={[{ value: 'week', label: 'Semana' }, { value: 'month', label: 'Mes' }]}
+            />
           </div>
         </header>
 
@@ -141,7 +135,7 @@ const Calendar = () => {
               aria-pressed={filter === f.id}
               onClick={() => setFilter(f.id)}
               className={cn(
-                'shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                'shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-[color,background-color,border-color,transform] duration-fast active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 filter === f.id ? 'border-primary bg-primary-soft text-primary' : 'border-border/60 bg-card text-muted-foreground hover:bg-muted',
               )}
             >
@@ -161,16 +155,17 @@ const Calendar = () => {
           </div>
 
           {isLoading ? (
-            <div className="space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-[62px] rounded-xl" />)}</div>
+            showSkeleton ? <div className="space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-[62px] rounded-xl" />)}</div> : null
           ) : dayEvents.length ? (
             <div className="space-y-2">
-              {dayEvents.map((e) => (
-                <AgendaItem
-                  key={e.id}
-                  event={e}
-                  source={e.source === 'club' ? 'club' : 'mio'}
-                  onToggleComplete={toggleDone}
-                />
+              {dayEvents.map((e, i) => (
+                <div key={e.id} {...staggerProps(enter, i)}>
+                  <AgendaItem
+                    event={e}
+                    source={e.source === 'club' ? 'club' : 'mio'}
+                    onToggleComplete={toggleDone}
+                  />
+                </div>
               ))}
             </div>
           ) : (
@@ -186,7 +181,7 @@ const Calendar = () => {
           <button
             type="button"
             onClick={() => setSelected(next.date)}
-            className="flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card p-3 text-left transition-colors duration-150 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card p-3 text-left transition-[color,background-color,border-color,transform] duration-fast active:scale-[.97] hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <IconBadge icon={nextIcon.icon} tone={nextIcon.tone} />
             <span className="min-w-0 flex-1">

@@ -8,6 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PageSkeleton } from '@/components/skeletons/PageSkeleton';
+import { staggerProps, useEnterOnce } from '@/hooks/useEnterOnce';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { IconBadge } from '@/components/play/IconBadge';
 import { ProgressRing } from '@/components/play/ProgressRing';
@@ -92,6 +94,7 @@ const Training = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { plan, isLoading } = useTrainingPlan();
+  const enter = useEnterOnce('training');
   const coachNote = useCoachNote();
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [planOpen, setPlanOpen] = useState('');
@@ -107,9 +110,7 @@ const Training = () => {
   if (isLoading || sportQuery.isLoading) {
     return (
       <AppLayout>
-        <div className="mx-auto max-w-3xl space-y-4">
-          <Skeleton className="h-16 rounded-2xl" /><Skeleton className="h-44 rounded-2xl" /><Skeleton className="h-24 rounded-2xl" />
-        </div>
+        <div className="mx-auto max-w-3xl"><PageSkeleton message="Preparando tu sesión…" /></div>
       </AppLayout>
     );
   }
@@ -182,7 +183,7 @@ const Training = () => {
 
         <section>
           <div className="mb-2 flex items-center justify-between"><h2 className="font-heading text-base font-semibold">Desafíos de la semana</h2><PreviewBadge /></div>
-          <div className="space-y-2">{CHALLENGES.map((c) => <ChallengeCard key={c.id} challenge={c} />)}</div>
+          <div className="space-y-2">{CHALLENGES.map((c, i) => <div key={c.id} {...staggerProps(enter, i)}><ChallengeCard challenge={c} /></div>)}</div>
         </section>
 
         <section>

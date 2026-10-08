@@ -73,7 +73,7 @@ export const AddEventModal = ({ open, onClose, onSave, initialDate }: AddEventMo
                     aria-checked={on}
                     onClick={() => setType(t.type)}
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-[color,background-color,border-color,transform] duration-fast active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                       on ? 'border-primary bg-primary-soft text-primary' : 'border-border/60 bg-card hover:bg-muted',
                     )}
                   >

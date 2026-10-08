@@ -16,6 +16,8 @@ interface BadgeCardProps {
   };
   index?: number;
   compact?: boolean;
+  /** Recién desbloqueado: el ícono entra con pop-in (spring) */
+  celebrate?: boolean;
 }
 
 const categoryColors: Record<string, { bg: string; border: string }> = {
@@ -25,7 +27,7 @@ const categoryColors: Record<string, { bg: string; border: string }> = {
   training: { bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
 };
 
-export const BadgeCard = ({ badge, index = 0, compact }: BadgeCardProps) => {
+export const BadgeCard = ({ badge, index = 0, compact, celebrate }: BadgeCardProps) => {
   const colors = categoryColors[badge.category] || categoryColors.streak;
 
   if (compact) {
@@ -59,7 +61,8 @@ export const BadgeCard = ({ badge, index = 0, compact }: BadgeCardProps) => {
     >
       <div className={cn(
         'w-12 h-12 rounded-full flex items-center justify-center text-2xl shrink-0',
-        badge.isUnlocked ? colors.bg : 'bg-muted'
+        badge.isUnlocked ? colors.bg : 'bg-muted',
+        celebrate && 'animate-pop-in'
       )}>
         {badge.isUnlocked ? badge.icon : '🔒'}
       </div>

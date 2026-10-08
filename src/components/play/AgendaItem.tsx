@@ -44,7 +44,7 @@ export const AgendaItem = memo(({ event, source = 'mio', onToggleComplete, onCli
           aria-label={event.isCompleted ? 'Marcar como pendiente' : 'Marcar como hecho'}
           aria-pressed={!!event.isCompleted}
           className={cn(
-            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-[color,background-color,border-color,transform] duration-fast active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             event.isCompleted ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-transparent hover:text-muted-foreground',
           )}
         >

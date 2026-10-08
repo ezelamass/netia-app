@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Frown, Meh, Pause, Play, Smile, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SavedCheck, XpFloat } from '@/components/ui/feedback';
 import { ProgressRing } from '@/components/play/ProgressRing';
 import type { DaySession, ExerciseBlock } from '@/hooks/useTrainingPlan';
 import { cn } from '@/lib/utils';
@@ -25,11 +26,14 @@ const RPE_FACE = (n: number) => (n <= 3 ? Smile : n <= 7 ? Meh : Frown);
 interface Props {
   session: DaySession;
   saving?: boolean;
+  /** Guardado confirmado: el botón muestra check + "+XP" */
+  done?: boolean;
+  xp?: number;
   onExit: () => void;
   onFinish: (rpe: number) => void;
 }
 
-export const GuidedSession = ({ session, saving, onExit, onFinish }: Props) => {
+export const GuidedSession = ({ session, saving, done, xp, onExit, onFinish }: Props) => {
   const items = session.exercises;
   const [index, setIndex] = useState(0);
   const [rpe, setRpe] = useState<number | null>(null);
@@ -65,7 +69,7 @@ export const GuidedSession = ({ session, saving, onExit, onFinish }: Props) => {
           className="h-2 flex-1 overflow-hidden rounded-full bg-muted"
           role="progressbar" aria-valuenow={sessionPct} aria-valuemin={0} aria-valuemax={100} aria-label="Avance de la sesión"
         >
-          <div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${sessionPct}%` }} />
+          <div className="h-full rounded-full bg-primary transition-[width] duration-slow ease-out" style={{ width: `${sessionPct}%` }} />
         </div>
         <span className="w-10 text-right text-xs font-semibold tabular-nums text-muted-foreground">{Math.min(index + 1, items.length)}/{items.length}</span>
       </div>
@@ -108,7 +112,7 @@ export const GuidedSession = ({ session, saving, onExit, onFinish }: Props) => {
                   aria-checked={rpe === n}
                   onClick={() => setRpe(n)}
                   className={cn(
-                    'h-12 w-12 rounded-xl border text-base font-bold tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    'h-12 w-12 rounded-xl border text-base font-bold tabular-nums transition-[color,background-color,border-color,transform] duration-fast active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                     rpe === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border/60 bg-card hover:bg-muted',
                   )}
                 >
@@ -121,8 +125,14 @@ export const GuidedSession = ({ session, saving, onExit, onFinish }: Props) => {
             </div>
           </div>
           <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <Button size="lg" className="w-full" disabled={rpe === null || saving} onClick={() => rpe !== null && onFinish(rpe)}>
-              {saving ? 'Guardando…' : 'Guardar y sumar XP'}
+            <Button size="lg" className="relative w-full disabled:opacity-100" disabled={rpe === null || saving || done} onClick={() => rpe !== null && onFinish(rpe)}>
+              {done ? (
+                <>
+                  <SavedCheck className="h-5 w-5" />
+                  Guardado
+                  {xp ? <XpFloat amount={xp} className="right-1/2 translate-x-1/2" /> : null}
+                </>
+              ) : saving ? 'Guardando…' : 'Guardar y sumar XP'}
             </Button>
           </div>
         </>

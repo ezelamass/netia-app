@@ -27,6 +27,7 @@ export function useCountUp<T extends HTMLElement = HTMLElement>(target: number, 
     const io = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return;
       io.disconnect();
+      if (target <= 0) return;
       if (key !== undefined) seen.add(key);
       const t0 = performance.now();
       const tick = (now: number) => {

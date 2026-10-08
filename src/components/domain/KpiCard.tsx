@@ -1,5 +1,6 @@
 import { ArrowDownRight, ArrowUpRight, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CountUp } from '@/components/play/CountUp';
 
 interface KpiCardProps {
   label: string;
@@ -51,7 +52,7 @@ export const KpiCard = ({
       onClick={onClick}
       className={cn(
         'rounded-lg border border-border bg-card p-4 text-left shadow-card',
-        onClick && 'transition-colors hover:border-primary/40 focus-visible:ring-2',
+        onClick && 'transition-[border-color,transform] duration-fast hover:border-primary/40 active:scale-[.98] focus-visible:ring-2',
         className,
       )}
     >
@@ -60,7 +61,9 @@ export const KpiCard = ({
         {Icon && <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />}
       </div>
       <div className="mt-2 flex items-end justify-between gap-2">
-        <p className={cn('text-2xl font-bold font-heading tabular', TONE_TEXT[tone])}>{value}</p>
+        <p className={cn('text-2xl font-bold font-heading tabular', TONE_TEXT[tone])}>
+          {typeof value === 'number' && Number.isInteger(value) ? <CountUp value={value} id={`kpi:${label}`} /> : value}
+        </p>
         {trend && <Sparkline data={trend} className={good ? 'text-success' : 'text-danger'} />}
       </div>
       {delta !== undefined && (

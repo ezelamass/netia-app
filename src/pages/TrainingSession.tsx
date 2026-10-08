@@ -14,6 +14,7 @@ const TrainingSession = () => {
   const { toast } = useToast();
   const { plan, isLoading, completeSession, xpPerSession } = useTrainingPlan();
   const [saving, setSaving] = useState(false);
+  const [done, setDone] = useState(false);
 
   if (isLoading) {
     return <div className="fixed inset-0 z-[60] bg-background p-6"><Skeleton className="h-full w-full rounded-2xl" /></div>;
@@ -31,12 +32,14 @@ const TrainingSession = () => {
     }
     if (!prefersReducedMotion()) confetti({ particleCount: 60, spread: 70, origin: { y: 0.7 }, disableForReducedMotion: true });
     toast({ title: `¡Sesión completa! +${xpPerSession} XP` });
-    navigate('/training', { replace: true });
+    // Check + "+XP" en el botón un instante antes de volver (el guardado ya terminó).
+    setDone(true);
+    window.setTimeout(() => navigate('/training', { replace: true }), 700);
   };
 
   return (
     <div className="fixed inset-0 z-[60] bg-background" role="dialog" aria-label={`Sesión guiada: ${session.title}`}>
-      <GuidedSession session={session} saving={saving} onExit={() => navigate('/training')} onFinish={finish} />
+      <GuidedSession session={session} saving={saving} done={done} xp={xpPerSession} onExit={() => navigate('/training')} onFinish={finish} />
     </div>
   );
 };

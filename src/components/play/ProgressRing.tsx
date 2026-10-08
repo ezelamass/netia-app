@@ -1,5 +1,6 @@
 import { memo, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { useGrowIn } from '@/hooks/useGrowIn';
 
 interface ProgressRingProps {
   /** 0–100 */
@@ -13,6 +14,7 @@ interface ProgressRingProps {
 /** Anillo de progreso en SVG puro (sin recharts). */
 export const ProgressRing = memo(({ value, size = 64, stroke = 6, label, className }: ProgressRingProps) => {
   const v = Math.max(0, Math.min(100, value));
+  const shown = useGrowIn(v);
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   return (
@@ -26,8 +28,8 @@ export const ProgressRing = memo(({ value, size = 64, stroke = 6, label, classNa
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} className="stroke-muted" />
         <circle
           cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} strokeLinecap="round"
-          className="stroke-primary transition-[stroke-dashoffset] duration-300 ease-out"
-          strokeDasharray={c} strokeDashoffset={c * (1 - v / 100)}
+          className="stroke-primary transition-[stroke-dashoffset] duration-slow ease-out"
+          strokeDasharray={c} strokeDashoffset={c * (1 - shown / 100)}
         />
       </svg>
       <span className="absolute text-xs font-bold tabular-nums">{label ?? `${Math.round(v)}%`}</span>

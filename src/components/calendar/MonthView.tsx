@@ -45,7 +45,7 @@ export const MonthView = memo(({ month, selected, onSelect, dotsByDay }: MonthVi
               aria-pressed={isSel}
               aria-label={format(d, "EEEE d 'de' MMMM", { locale: es })}
               className={cn(
-                'flex h-12 flex-col items-center justify-center gap-0.5 rounded-xl border text-sm font-medium tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                'flex h-12 flex-col items-center justify-center gap-0.5 rounded-xl border text-sm font-medium tabular-nums transition-[color,background-color,border-color,transform] duration-fast active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 isSel ? 'border-primary bg-primary text-primary-foreground' : 'border-transparent hover:bg-muted',
                 !isSel && isToday && 'border-primary/40 bg-primary-soft text-primary',
                 !isSameMonth(d, month) && !isSel && 'text-muted-foreground/50',
