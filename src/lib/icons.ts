@@ -50,7 +50,9 @@ export const EVENT_ICON_KEY: Record<'training' | 'nutrition' | 'mental' | 'tourn
   alert: 'alert',
 };
 
-export const getEventIcon = (type: keyof typeof EVENT_ICON_KEY) => ICONS[EVENT_ICON_KEY[type]];
+/** `event_type` es texto libre en la base: un tipo desconocido cae en 'training'. */
+export const getEventIcon = (type: string) =>
+  ICONS[Object.prototype.hasOwnProperty.call(EVENT_ICON_KEY, type) ? EVENT_ICON_KEY[type as keyof typeof EVENT_ICON_KEY] : 'training'];
 
 /** Color del punto (calendario) por tono. */
 export const TONE_DOT: Record<Tone, string> = {

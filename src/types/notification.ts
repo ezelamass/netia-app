@@ -7,6 +7,32 @@ export type NotificationType =
   | 'info' 
   | 'tournament';
 
+const NOTIFICATION_TYPES: readonly NotificationType[] = [
+  'health_alert', 'reminder', 'achievement', 'ai_message', 'streak', 'info', 'tournament',
+];
+
+/** Tipos que existen en la base (texto libre, p. ej. el seed de cuentas demo) y su equivalente en la UI. */
+const NOTIFICATION_TYPE_ALIASES: Record<string, NotificationType> = {
+  badge_earned: 'achievement',
+  xp_milestone: 'achievement',
+  session_reminder: 'reminder',
+  session_complete: 'achievement',
+  wellness_tip: 'ai_message',
+  system: 'info',
+};
+
+/** La columna `type` es texto libre: cualquier valor desconocido se muestra como 'info'. */
+export function normalizeNotificationType(type: unknown): NotificationType {
+  if (typeof type !== 'string') return 'info';
+  if ((NOTIFICATION_TYPES as readonly string[]).includes(type)) return type as NotificationType;
+  return Object.prototype.hasOwnProperty.call(NOTIFICATION_TYPE_ALIASES, type) ? NOTIFICATION_TYPE_ALIASES[type] : 'info';
+}
+
+/** La base guarda 'normal' (seed) además de low/medium/high. */
+export function normalizeNotificationPriority(priority: unknown): NotificationPriority {
+  return priority === 'low' || priority === 'high' ? priority : 'medium';
+}
+
 export type NotificationPriority = 'low' | 'medium' | 'high';
 
 export type AvatarType = 'TINO' | 'ZAHIA' | 'ROMA';

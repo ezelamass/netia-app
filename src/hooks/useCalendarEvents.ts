@@ -53,7 +53,7 @@ export const mapEventRow = (row: EventRow, source: 'mio' | 'club'): CalendarEven
   date: new Date(row.start_time),
   startTime: row.start_time ? format(new Date(row.start_time), 'HH:mm') : undefined,
   endTime: row.end_time ? format(new Date(row.end_time), 'HH:mm') : undefined,
-  type: (row.event_type || 'training') as EventType,
+  type: EVENT_TYPES.some((e) => e.type === row.event_type) ? (row.event_type as EventType) : 'training',
   description: row.description || undefined,
   isRecurring: row.is_recurring || false,
   isCompleted: false,

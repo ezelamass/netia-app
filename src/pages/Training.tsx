@@ -19,7 +19,7 @@ import {
   StageProgressBar, WeeklyMicrocycle, LoadRecoveryCard, ChallengeCard, DrillCarousel, CoachNoteCard,
 } from '@/components/training';
 import { CHALLENGES, COACH_NOTE_PREVIEW } from '@/data/training-preview';
-import { SESSION_TYPE_LABELS, type SessionType } from '@/types/training';
+import { getSessionTypeLabel } from '@/types/training';
 import type { Tone } from '@/lib/icons';
 
 const DiagnosticRadar = lazy(() => import('@/components/training/DiagnosticRadar').then((m) => ({ default: m.DiagnosticRadar })));
@@ -44,7 +44,7 @@ const DaySummary = ({ session, onStart }: { session: DaySession; onStart?: () =>
     <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium text-muted-foreground">{SESSION_TYPE_LABELS[session.type as SessionType]}</p>
+          <p className="text-xs font-medium text-muted-foreground">{getSessionTypeLabel(session.type)}</p>
           <h3 className="truncate font-heading text-lg font-bold">{session.title}</h3>
         </div>
         <div className="shrink-0 text-right text-xs text-muted-foreground">

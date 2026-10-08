@@ -53,6 +53,10 @@ export const SESSION_TYPE_LABELS: Record<SessionType, string> = {
   recovery: 'Recuperación',
 };
 
+/** `session_type`/`type` son texto libre en la base: un tipo desconocido se muestra genérico. */
+export const getSessionTypeLabel = (type: string): string =>
+  Object.prototype.hasOwnProperty.call(SESSION_TYPE_LABELS, type) ? SESSION_TYPE_LABELS[type as SessionType] : 'Entrenamiento';
+
 export const SESSION_TYPE_COLORS: Record<SessionType, string> = {
   technical: 'bg-blue-500',
   physical: 'bg-orange-500',
