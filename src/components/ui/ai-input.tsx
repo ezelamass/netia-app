@@ -6,6 +6,20 @@ import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+import { readEdgeError } from "@/lib/edgeError";
+
+const MAX_RECORDING_SECONDS = 60;
+const WARN_RECORDING_SECONDS = 50;
+const MIME_CANDIDATES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
+
+/** Primer formato que soporta el navegador (Safari iOS solo graba mp4). Sin soporte declarado, deja que elija el navegador. */
+function pickMimeType(): string | undefined {
+  if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") return undefined;
+  return MIME_CANDIDATES.find((t) => MediaRecorder.isTypeSupported(t));
+}
+
+const extensionFor = (mime: string) => (mime.includes("mp4") ? "mp4" : mime.includes("ogg") ? "ogg" : "webm");
 
 interface AIInputProps {
   id?: string;
@@ -49,7 +63,14 @@ export function AIInput({
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const { toast } = useToast();
+  // Texto actual al terminar de grabar: lo que se tipeó mientras tanto no se pisa.
+  const inputValueRef = useRef(inputValue);
+  inputValueRef.current = inputValue;
+  const setInputValueRef = useRef(setInputValue);
+  setInputValueRef.current = setInputValue;
 
   // Ajusta el alto cuando el texto cambia desde afuera (cambio de agente, precarga, transcripción).
   useEffect(() => { adjustHeight(); }, [inputValue, adjustHeight]);
@@ -62,9 +83,25 @@ export function AIInput({
   };
 
   const startRecording = async () => {
+    if (typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      toast({ title: "Tu navegador no puede grabar audio", description: "Probá escribiendo el mensaje." });
+      return;
+    }
+    let stream: MediaStream;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      const denied = err instanceof DOMException && (err.name === "NotAllowedError" || err.name === "SecurityError");
+      toast({
+        title: denied ? "Activá el micrófono en el navegador" : "No encontramos un micrófono",
+        description: denied ? "Dale permiso para poder grabar mensajes de voz." : undefined,
+      });
+      return;
+    }
+    try {
+      const mimeType = pickMimeType();
+      const mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      streamRef.current = stream;
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
@@ -74,14 +111,18 @@ export function AIInput({
 
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        await transcribeAudio(audioBlob);
+        streamRef.current = null;
+        const type = mediaRecorder.mimeType || mimeType || "audio/webm";
+        if (!chunksRef.current.length) return;
+        await transcribeAudio(new Blob(chunksRef.current, { type }));
       };
 
       mediaRecorder.start();
       setIsRecording(true);
-    } catch {
-      console.error('Microphone access denied');
+    } catch (err) {
+      stream.getTracks().forEach((t) => t.stop());
+      console.error("Recorder error:", err);
+      toast({ title: "Tu navegador no puede grabar audio", description: "Probá escribiendo el mensaje." });
     }
   };
 
@@ -101,18 +142,24 @@ export function AIInput({
     setIsTranscribing(true);
     try {
       const formData = new FormData();
-      formData.append('audio', blob, 'audio.webm');
+      formData.append('audio', blob, `audio.${extensionFor(blob.type)}`);
 
       const { data, error } = await supabase.functions.invoke('whisper-transcribe', {
         body: formData,
       });
 
       if (error) throw error;
-      if (data?.text) {
-        setInputValue(inputValue ? `${inputValue} ${data.text}` : data.text);
+      const text = typeof data?.text === 'string' ? data.text.trim() : '';
+      if (text) {
+        const current = inputValueRef.current;
+        setInputValueRef.current(current ? `${current} ${text}` : text);
+      } else {
+        toast({ title: "No se escuchó nada", description: "Probá grabar de nuevo, más cerca del micrófono." });
       }
     } catch (err) {
-      console.error('Transcription error:', err);
+      const info = await readEdgeError(err);
+      console.error('Transcription error:', info.code, info.message);
+      toast({ title: "No pudimos transcribir el audio", description: "Probá de nuevo o escribí el mensaje." });
     } finally {
       setIsTranscribing(false);
     }
@@ -129,11 +176,28 @@ export function AIInput({
     return () => clearInterval(interval);
   }, [isRecording]);
 
+  // Corta solo al llegar al máximo (el servidor rechaza audios de más de 5 MB).
+  useEffect(() => {
+    if (isRecording && recordingSeconds >= MAX_RECORDING_SECONDS) stopRecording();
+  }, [isRecording, recordingSeconds]);
+
+  // Al salir de la pantalla, soltar el micrófono sin transcribir.
+  useEffect(() => () => {
+    const rec = mediaRecorderRef.current;
+    if (rec) rec.onstop = null;
+    if (rec?.state === 'recording') rec.stop();
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+  }, []);
+
   const formatDuration = (s: number) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
+
+  const recordingLabel = recordingSeconds >= WARN_RECORDING_SECONDS
+    ? `Grabando ${formatDuration(recordingSeconds)} · corta a ${formatDuration(MAX_RECORDING_SECONDS)}`
+    : `Grabando ${formatDuration(recordingSeconds)}`;
 
   const isBusy = disabled || isTranscribing;
 
@@ -145,7 +209,7 @@ export function AIInput({
         {(isRecording || isTranscribing) && (
           <div className="mb-1 flex items-center gap-2 px-3 py-1 text-xs font-medium text-muted-foreground" role="status">
             <span className={cn("h-2 w-2 shrink-0 rounded-full animate-pulse", isRecording ? "bg-destructive" : "bg-primary")} />
-            {isRecording ? `Grabando ${formatDuration(recordingSeconds)}` : "Transcribiendo audio..."}
+            {isRecording ? recordingLabel : "Transcribiendo audio..."}
           </div>
         )}
         <div className="flex items-end gap-2">
@@ -199,7 +263,7 @@ export function AIInput({
             "h-2 w-2 rounded-full shrink-0",
             isRecording ? "bg-destructive animate-pulse" : "bg-primary animate-pulse"
           )} />
-          {isRecording && <span>Grabando {formatDuration(recordingSeconds)}</span>}
+          {isRecording && <span>{recordingLabel}</span>}
           {isTranscribing && <span>Transcribiendo audio...</span>}
         </div>
       )}

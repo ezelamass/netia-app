@@ -158,7 +158,7 @@ const Chat = () => {
             ) : isEmpty ? (
               <div className="flex flex-1 flex-col justify-end gap-2 px-3 pb-3 lg:px-6">
                 {notice}
-                <MessageBubble isUser={false} first fresh text={`¡Hola! Soy ${AGENTS[agent].name}. ${AGENTS[agent].description}`} />
+                <MessageBubble isUser={false} first fresh text={AGENTS[agent].greeting} />
               </div>
             ) : (
               <MessageList
@@ -168,6 +168,7 @@ const Chat = () => {
                 isTyping={chat.isSending}
                 handoff={chat.handoff}
                 onHandoff={onHandoff}
+                onRetry={chat.retryMessage}
                 header={notice}
               />
             )}

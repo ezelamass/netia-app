@@ -34,6 +34,7 @@ interface MessageListProps {
   isTyping: boolean;
   handoff: Handoff | null;
   onHandoff: (h: Handoff) => void;
+  onRetry?: (messageId: string) => void;
   /** Contenido antes de los mensajes (aviso honesto) y después (saludo, etc.) */
   header?: ReactNode;
   className?: string;
@@ -41,7 +42,7 @@ interface MessageListProps {
 
 interface Day { key: string; label: string; items: { m: ChatMessage; first: boolean }[] }
 
-export const MessageList = ({ agent, scopeKey, messages, isTyping, handoff, onHandoff, header, className }: MessageListProps) => {
+export const MessageList = ({ agent, scopeKey, messages, isTyping, handoff, onHandoff, onRetry, header, className }: MessageListProps) => {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const nearBottom = useRef(true);
   const [showJump, setShowJump] = useState(false);
@@ -115,6 +116,7 @@ export const MessageList = ({ agent, scopeKey, messages, isTyping, handoff, onHa
                 timestamp={m.timestamp}
                 status={m.status}
                 fresh={m.fresh}
+                onRetry={m.status === 'failed' && onRetry ? () => onRetry(m.id) : undefined}
                 className={first ? 'mt-2' : 'mt-0.5'}
               />
             ))}

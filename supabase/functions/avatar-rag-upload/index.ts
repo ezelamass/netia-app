@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { getOpenAIKey } from "../_shared/openai.ts";
 
 type AvatarId = "TINO" | "ZAHIA" | "ROMA";
 
@@ -110,7 +111,6 @@ serve(async (req) => {
     }
 
     const tableName = RAG_TABLES[avatar as AvatarId];
-    const OPENAI_KEY = Deno.env.get("key_openai")!;
 
     // List documents
     if (action === "list") {
@@ -127,8 +127,6 @@ serve(async (req) => {
 
     // Delete document chunks
     if (action === "delete") {
-      const { documentName } = await req.json().catch(() => ({ documentName: null }));
-      // Since we already parsed, use the existing body
       const deleteFilename = filename;
       const { error } = await serviceClient
         .from(tableName)
@@ -142,6 +140,14 @@ serve(async (req) => {
     }
 
     // Upload: chunk + embed + insert
+    const OPENAI_KEY = getOpenAIKey();
+    if (!OPENAI_KEY) {
+      console.error("OPENAI_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: "OpenAI key not configured", code: "config" }),
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+      );
+    }
     if (!content || !filename) {
       return new Response(
         JSON.stringify({ error: "content and filename are required" }),

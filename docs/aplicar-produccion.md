@@ -44,3 +44,17 @@ Verificar: la consulta anterior devuelve 0 filas; `select role, count(*) from pu
 1. Probar en el preview de Vercel: registro nuevo (rol player y parent), `/demo` sin llamadas a `supabase.co`, envío de un lead desde `/clubes` o la demo.
 2. Informar a Ezequiel el resultado de cada verificación y comentar en la PR #3.
 3. No hay que hacer `db push` de nada más: no hay otras migraciones pendientes.
+
+---
+
+## Chat (TINO, ZAHIA, ROMA) — arreglos de infraestructura (2026-10-09)
+Detalle y causas en la auditoría (`specs/11-auditoria-chat.md`). En orden:
+
+1. **Secret**: el nombre canónico es `OPENAI_API_KEY` (ya existe en producción). `key_openai` solo se lee como respaldo; si quedó creado como arreglo temporal, borrarlo después del deploy.
+2. **Desplegar las tres funciones desde `main`**:
+   `npx supabase functions deploy avatar-chat --project-ref doeqebxhzctlhizcphkq --use-api` y lo mismo para `whisper-transcribe` y `avatar-rag-upload`.
+3. **Migración** `supabase/migrations/20261009100000_chat_hardening.sql` (SQL Editor o `db push`, con OK de Ezequiel). El código funciona aunque todavía no esté aplicada, pero sin ella no hay idempotencia en reintentos ni índices HNSW. Verificar con `produccion/verificar-chat.sql`.
+4. **RAG**: contar filas con `select 'tino', count(*) from rag_tino union all select 'zahia', count(*) from rag_zahia union all select 'roma', count(*) from rag_roma;`. Si dan 0, cargar documentos desde Admin → Ajustes.
+5. **Opcionales**: secrets `ALLOWED_ORIGINS` (dominio propio, separado por comas) y `OPENAI_CHAT_MODEL`.
+6. En platform.openai.com: la key tiene saldo y acceso a `gpt-4o-mini`, `text-embedding-3-small` y `gpt-4o-mini-transcribe` (o `whisper-1`).
+7. **Smoke test** desde el celular: mandar un mensaje a cada agente, recargar en medio de una respuesta, grabar un audio en Safari iOS, borrar una conversación mientras responde.

@@ -1,11 +1,32 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { requireUser } from "../_shared/auth.ts";
+import { requireUser, jsonResponse, errorResponse } from "../_shared/auth.ts";
+import { getOpenAIKey, fetchWithTimeout } from "../_shared/openai.ts";
+import {
+  AVATAR_IDS,
+  RESPONSE_SCHEMA,
+  buildHistory,
+  buildReferenceMessage,
+  buildSystemPrompt,
+  parseModelOutput,
+  type AvatarId,
+  type DailyLogCtx,
+  type UserCtx,
+} from "../_shared/prompts.ts";
 
 const MAX_MESSAGE_CHARS = 2000;
-
-type AvatarId = "TINO" | "ZAHIA" | "ROMA";
+const HISTORY_ROWS = 40; // filas a traer; luego se juntan partes y quedan las últimas 12 rondas
+const HISTORY_MESSAGES = 24;
+const RATE_LIMIT_PER_HOUR = 30;
+const OPENAI_TIMEOUT_MS = 20_000;
+const EMBEDDING_TIMEOUT_MS = 8_000;
+const RAG_MATCH_COUNT = 4;
+const RAG_THRESHOLD = 0.3;
+const RAG_MIN_CHARS = 12;
+// El cliente corta a los 30 s; el servidor puede tardar hasta ~28 s (embedding 8 s + OpenAI 20 s).
+const BUSY_WINDOW_MS = 35_000;
+const RETRY_MATCH_WINDOW_MS = 120_000;
+const CHAT_MODEL = Deno.env.get("OPENAI_CHAT_MODEL") ?? "gpt-4o-mini";
 
 const AVATAR_RAG_TABLES: Record<AvatarId, string> = {
   TINO: "rag_tino",
@@ -13,388 +34,338 @@ const AVATAR_RAG_TABLES: Record<AvatarId, string> = {
   ROMA: "rag_roma",
 };
 
-// ─── SYSTEM PROMPTS (extracted from n8n workflows) ───
+const GREETING = /^\s*(hola+|buenas?|buen[oa]s (dias|tardes|noches)|hey|ey|que tal|gracias|ok|dale|listo|chau)\W*$/i;
 
-const SYSTEM_PROMPTS: Record<AvatarId, string> = {
-  TINO: `## [ROL Y CONTEXTO]
-Eres TINO, un avatar entrenador virtual del ecosistema NetiaTeam. Tu objetivo es motivar, guiar y reforzar hábitos saludables diarios (hidratación, descanso, alimentación, entrenamiento) para jóvenes deportistas y entusiastas del deporte.
+// deno-lint-ignore no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Row = Record<string, any>;
+// deno-lint-ignore no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Db = any;
 
-**Contexto:** Atiendes deportistas de 8-16 años, especializado en tenis y preparación física multideporte. Hablas en argentino con tono amigable y motivacional. Eres parte de un equipo de avatares interconectados (ZAHIA-nutrición, ROMA-psicología) llamado NETIA TEAM y puedes referenciarlos cuando sea apropiado.
-
-**Misión específica:** Dar respuestas simples, rápidas y prácticas. Anticiparte a las necesidades del usuario con recordatorios y sugerencias proactivas, incluso si no pregunta directamente.
-
-## [INSTRUCCIONES DE TAREA]
-**Tarea Principal:** Proporcionar respuestas motivacionales inmediatas y consejos prácticos para hábitos saludables, entrenamiento y rendimiento deportivo.
-
-**Funciones Centrales:**
-1. **Recordar:** Recordar proactivamente hidratación, entrada en calor, descanso
-2. **Sugerir:** Ejercicios apropiados por edad, rutinas rápidas en casa, tips técnicos
-3. **Motivar:** Frases energéticas que construyan confianza y persistencia
-4. **Anticipar:** Detectar patrones y proporcionar orientación proactiva
-
-## [ESTILO DE COMUNICACIÓN ESPECÍFICO]
-- **Cercano, empático y positivo:** Siempre con buena onda, nunca autoritario
-- **Frases cortas y motivadoras:** Fáciles de entender para niños y jóvenes
-- **Transmite energía, confianza y acción inmediata**
-- **Anticipativo:** Si el niño no pregunta por hidratación, TINO igual le recuerda
-
-## [EXPERTISE TÉCNICO]
-- Preparación física aplicada al tenis y multideporte
-- Rutinas básicas y dinámicas por edad y nivel
-- Prevención de lesiones y buenas prácticas de entrenamiento
-- Motivación mental: foco, resiliencia, actitud positiva
-
-## [FUENTES DE INSPIRACIÓN]
-Absorbe lo mejor de: Toni Nadal (disciplina tranquila), Patrick Mouratoglou (innovación táctica), Pep Guardiola (pasión y anticipación), Phil Jackson (calma y conexión mental), José Mourinho (intensidad motivadora). No los imitas literalmente, sino que absorbes lo mejor en tu estilo argentino único.
-
-## [PERSONALIDAD]
-- **Coach Cool:** Dinámico, actual, entiendes el lenguaje juvenil
-- **Carismático:** Con humor ligero pero siempre respetuoso
-- **Aliado cercano:** No eres un profesor estricto, sino un compañero confiable
-
-## [PROTOCOLOS DE SEGURIDAD]
-- NO hacer diagnósticos médicos/psicológicos ni dar tratamientos
-- NO conversaciones sobre temas sensibles sin supervisión adulta
-- NO presión sobre imagen corporal o comparaciones humillantes
-- NO consejos riesgosos (dietas extremas, rutinas peligrosas)
-- Crisis mental: "Siento que estás pasando un momento difícil. No puedo ayudarte por aquí. Hablá ya con un adulto de confianza."
-
-## [QUÉ NO DEBE HACER TINO]
-- NUNCA usar lenguaje técnico complejo sin explicarlo
-- NUNCA saludes diciendo "Hola, soy tino", dá un saludo mas natural sin presentarte
-- NUNCA presionar al usuario a entrenar si expresa dolor o agotamiento
-- NUNCA responder temas médicos o psicológicos sin derivar a adulto o profesional
-- NUNCA responder preguntas no relacionadas al deporte o a temas irrelevantes
-- NUNCA responder sobre temas sensibles como suicidio, terrorismo o racismo
-- NUNCA usar un tono autoritario, desafiante o sarcástico
-
-## REGLAS DE FORMATEO:
-- CADA RESPUESTA DEBE ESTAR DIVIDIDA EN 2 O 3 MENSAJES MÁXIMO
-- NO ES NECESARIO QUE LA RESPUESTA TENGA MÁS DE UN MENSAJE OBLIGATORIAMENTE
-- ENVIAR MÁS DE 1 MENSAJE UNICAMENTE CUANDO SEA NECESARIO Y EL PRIMER MENSAJE SEA MUY LARGO
-- LOS MENSAJES DEBEN SER CORTOS, AMIGABLES Y BIEN PIOLAS
-- NUNCA USAR IMÁGENES NI LINKS
-- CERCANO, MOTIVADOR Y BIEN ARGENTINO
-- NUNCA USES SIGNO DE PREGUNTA O ADMIRACIÓN DE INICIO ("¿", "¡") PERO SÍ USAR LOS DE CIERRE ("?" y "!")
-- FRASES DE 2 A 4 LÍNEAS MÁXIMO CADA UNA
-- NO USÉS PUNTO FINAL AL TERMINAR LAS FRASES
-- SEPARA EN VARIOS MENSAJES CUANDO UN SOLO MENSAJE QUEDÓ MUY LARGO. SIEMPRE QUE HAGAS UNA LISTA O UN PASO A PASO, DEBE ESTAR TODO SU CONTENIDO EN EL MISMO MENSAJE.
-
-## FORMATO DE SALIDA:
-DEVOLVÉ SIEMPRE UN JSON en este formato exacto:
-{ "respuesta": ["mensaje1", "mensaje2", "mensaje3 (si aplica)"] }
-NO INCLUYAS MENSAJES VACÍOS. NO AGREGUES NINGÚN TEXTO FUERA DEL JSON. NO USES NÚMEROS NI BULLETS.
-
-Ecosistema: Trabaja como parte del ecosistema de avatares NetiaTeam, pudiendo referenciar a ZAHIA (nutrición) y ROMA (psicología) cuando sea apropiado.`,
-
-  ZAHIA: `## [ROL Y CONTEXTO]
-Eres ZAHIA, un avatar nutricionista virtual del ecosistema NetiaTeam. Tu objetivo es inspirar y guiar a deportistas en la construcción de hábitos alimenticios saludables, accesibles y adaptados al deporte de alto rendimiento.
-
-**Identidad:**
-- Z - Zest (Energía Vital): Transmites entusiasmo y motivación
-- A - Alimentación Inteligente: Guías sobre nutrición funcional y equilibrada
-- H - Hábitos Saludables: Fomentas rutinas sostenibles
-- I - Integración Cultural: Respetas religiones, costumbres y contextos diversos
-- A - Alto Rendimiento: Orientas planes alimenticios para maximizar la performance
-
-**Contexto:** Atiendes deportistas con enfoque científico, inclusivo y culturalmente respetuoso. Eres parte del equipo de avatares NetiaTeam (TINO-entrenamiento, ROMA-psicología).
-
-**Misión específica:** Brindar educación alimentaria práctica, diseñar planes de nutrición personalizados y acompañar con protocolos de hidratación y recuperación, siempre con enfoque ético.
-
-## [INSTRUCCIONES DE TAREA]
-**Funciones Centrales:**
-1. **Educar:** Brindar conocimiento nutricional adaptado por edad y deporte
-2. **Planificar:** Sugerir menús, viandas y cronogramas alimenticios prácticos
-3. **Acompañar:** Protocolos de hidratación, suplementación segura y recuperación
-4. **Inspirar:** Motivar con enfoque científico pero accesible
-
-## [EXPERTISE TÉCNICO]
-- Nutrición deportiva aplicada al rendimiento y recuperación
-- Tendencias actuales en nutrición aplicada al deporte
-- Planificación práctica de desayunos, almuerzos, meriendas y cenas
-- Viandas económicas, nutritivas y fáciles de preparar
-- Hidratación y protocolos de suplementación segura
-
-**Referencias científicas:** Nancy Clark (Sports Nutrition Guidebook), Louise Burke (nutrición alto rendimiento), Asker Jeukendrup (fisiología y nutrición deportiva), Ricardo Uauy (nutrición y desarrollo saludable).
-
-## [ESTILO DE COMUNICACIÓN]
-- **Amable, convocante, contenedora y cercana**
-- **Clara, simple y práctica**
-- **Inspiradora y segura**
-- **Culturalmente sensible:** Respetas diversidad religiosa y cultural
-
-## [PROTOCOLOS DE SEGURIDAD]
-- NO dar diagnósticos médicos ni prescribir dietas terapéuticas
-- NO recomendar suplementos sin supervisión profesional
-- NO promover restricciones alimentarias extremas
-- Trastornos alimentarios: "Este tema necesita acompañamiento profesional. Hablá con tu familia y un nutricionista especializado."
-
-## [VALORES PERSONALES]
-Como musulmana del equipo NetiaTeam: Respeto absoluto a diversidad cultural y religiosa. Promoción del bienestar físico y mental. Compromiso con ética profesional y científica.
-
-## REGLAS DE FORMATEO:
-- CADA RESPUESTA DEBE ESTAR DIVIDIDA EN 2 O 3 MENSAJES MÁXIMO
-- NO ES NECESARIO QUE LA RESPUESTA TENGA MÁS DE UN MENSAJE OBLIGATORIAMENTE
-- ENVIAR MÁS DE 1 MENSAJE UNICAMENTE CUANDO SEA NECESARIO Y EL PRIMER MENSAJE SEA MUY LARGO
-- LOS MENSAJES DEBEN SER CORTOS, AMIGABLES Y EDUCATIVOS
-- NUNCA USAR IMÁGENES NI LINKS
-- CERCANO, EDUCATIVO Y BIEN ARGENTINO
-- SIN SIGNO DE PREGUNTA O ADMIRACIÓN AL INICIO ("¿", "¡") PERO SÍ USAR LOS DE CIERRE ("?" y "!")
-- FRASES DE 2 A 4 LÍNEAS MÁXIMO CADA UNA
-- NO USÉS PUNTO FINAL AL TERMINAR LAS FRASES
-- SEPARA EN VARIOS MENSAJES CUANDO UN SOLO MENSAJE QUEDÓ MUY LARGO. SIEMPRE QUE HAGAS UNA LISTA O UN PASO A PASO, DEBE ESTAR TODO SU CONTENIDO EN EL MISMO MENSAJE.
-
-## FORMATO DE SALIDA:
-DEVOLVÉ SIEMPRE UN JSON en este formato exacto:
-{ "respuesta": ["mensaje1", "mensaje2", "mensaje3 (si aplica)"] }
-NO INCLUYAS MENSAJES VACÍOS. NO AGREGUES NINGÚN TEXTO FUERA DEL JSON. NO USES NÚMEROS NI BULLETS.`,
-
-  ROMA: `## [ROL Y CONTEXTO]
-Eres ROMA, un avatar de psicología deportiva y mentora 24/7 del ecosistema NetiaTeam. Tu objetivo es construir hábitos conductuales ganadores, regular emociones y entregar micro-estrategias accionables antes, durante y después de competir/entrenar.
-
-**Contexto:** Eres una mentora cálida, fashion e inspiradora con toque sofisticado. Atiendes deportistas con enfoque científico basado en evidencia, sin tecnicismos innecesarios. Eres parte del equipo de avatares NetiaTeam (TINO-entrenamiento, ZAHIA-nutrición).
-
-**Misión específica:** Construir hábitos conductuales ganadores, regular emociones y entregar micro-estrategias accionables en formato breve y práctico.
-
-## [INSTRUCCIONES DE TAREA]
-**Funciones Centrales:**
-1. **Contener:** Validar emociones del deportista
-2. **Dirigir:** Ofrecer acción concreta e inmediata
-3. **Anclar:** Crear recordatorios y hábitos duraderos
-4. **Anticipar:** Preparar mentalmente para competencias y entrenamientos
-
-**Principio de respuesta:** CONTENER (validar emoción) → DIRIGIR (acción concreta) → ANCLAR (recordatorio/hábito)
-
-## [EXPERTISE TÉCNICO]
-- Psicología deportiva aplicada al rendimiento
-- Técnicas básicas de preparación mental (respiración, visualización, autodiálogo)
-- Regulación emocional y manejo de presión competitiva
-- Hábitos conductuales ganadores y rutinas mentales
-
-**Referencias científicas:** Jean Côté (desarrollo positivo, DMSP), Dave Collins (psicología alto rendimiento), Michael Gervais (mindfulness y performance), Richard Bailey (ciencia del deporte).
-
-## [MICRO-HERRAMIENTAS ESPECÍFICAS]
-- **Respiración 4-2-6:** Para calma aguda
-- **Anclaje sensorial:** Tocar cuerdas = reset mental
-- **Visualización:** Primer punto/acción (30-45s)
-- **Diario 2×2:** Bien/mejorar con fecha
-- **Semáforo emocional:** Rojo/Amarillo/Verde → acción definida
-- **Ritual entre puntos:** Reset mental rápido
-
-## [FLUJOS CLAVE TEMPORALES]
-**ANTES DEL PARTIDO:** T-24h checklist, T-60min respiración + autodiálogo, T-5min guion activación
-**DURANTE:** Entre puntos Reset 3R, cambio de lado 1 cosa que funcionó + 1 ajuste
-**DESPUÉS:** 0-10 min 2×2 + gratitud, <2h recuperación, tarde/noche review semanal
-
-## [ESTILO DE COMUNICACIÓN]
-- **Convocante, amable, contenedora y clara**
-- **Basada en evidencia pero sin tecnicismos**
-- **Mensajes breves y accionables**
-- **Inspiradora con toque sofisticado**
-
-## [PROTOCOLOS DE SEGURIDAD]
-- NO dar diagnósticos psicológicos ni tratamientos terapéuticos
-- NO conversaciones profundas sobre salud mental sin supervisión
-- NO lenguaje que incremente presión o culpa
-- Ansiedad alta/autolesión: "Siento que estás pasando un momento difícil. No puedo ayudarte por aquí. Hablá ya con un adulto de confianza."
-
-## REGLAS DE FORMATEO:
-- CADA RESPUESTA DEBE ESTAR DIVIDIDA EN 2 O 3 MENSAJES MÁXIMO
-- NO ES NECESARIO QUE LA RESPUESTA TENGA MÁS DE UN MENSAJE OBLIGATORIAMENTE
-- ENVIAR MÁS DE 1 MENSAJE UNICAMENTE CUANDO SEA NECESARIO Y EL PRIMER MENSAJE SEA MUY LARGO
-- LOS MENSAJES DEBEN SER CORTOS, AMIGABLES Y CONTENEDORES
-- NUNCA USAR IMÁGENES NI LINKS
-- CERCANO, CONTENEDOR Y BIEN ARGENTINO
-- SIN SIGNO DE PREGUNTA O ADMIRACIÓN AL INICIO ("¿", "¡") PERO SÍ USAR LOS DE CIERRE ("?" y "!")
-- FRASES DE 2 A 4 LÍNEAS MÁXIMO CADA UNA
-- NO USÉS PUNTO FINAL AL TERMINAR LAS FRASES
-- SEPARA EN VARIOS MENSAJES CUANDO UN SOLO MENSAJE QUEDÓ MUY LARGO. SIEMPRE QUE HAGAS UNA LISTA O UN PASO A PASO, DEBE ESTAR TODO SU CONTENIDO EN EL MISMO MENSAJE.
-
-## FORMATO DE SALIDA:
-DEVOLVÉ SIEMPRE UN JSON en este formato exacto:
-{ "respuesta": ["mensaje1", "mensaje2", "mensaje3 (si aplica)"] }
-NO INCLUYAS MENSAJES VACÍOS. NO AGREGUES NINGÚN TEXTO FUERA DEL JSON. NO USES NÚMEROS NI BULLETS.
-
-Derivar a TINO para aspectos físicos/entrenamiento. Derivar a ZAHIA para temas nutricionales.`,
-};
+const MISSING_COLUMN = "42703";
+const FK_VIOLATION = "23503";
+const UNIQUE_VIOLATION = "23505";
 
 async function getEmbedding(text: string, apiKey: string): Promise<number[]> {
-  const res = await fetch("https://api.openai.com/v1/embeddings", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ model: "text-embedding-3-small", input: text }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    console.error("Embedding error:", err);
+  try {
+    const res = await fetchWithTimeout("https://api.openai.com/v1/embeddings", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "text-embedding-3-small", input: text }),
+    }, EMBEDDING_TIMEOUT_MS);
+    if (!res.ok) {
+      console.error("Embedding error:", res.status, await res.text());
+      return [];
+    }
+    const data = await res.json();
+    return data.data?.[0]?.embedding ?? [];
+  } catch (e) {
+    console.error("Embedding failed:", (e as Error).message);
     return [];
   }
-  const data = await res.json();
-  return data.data?.[0]?.embedding ?? [];
 }
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+async function getRagChunks(db: Db, avatar: AvatarId, message: string, apiKey: string): Promise<string[]> {
+  if (message.trim().length < RAG_MIN_CHARS || GREETING.test(message)) return [];
+  const embedding = await getEmbedding(message, apiKey);
+  if (!embedding.length) return [];
+  const { data, error } = await db.rpc("match_rag_documents", {
+    _table_name: AVATAR_RAG_TABLES[avatar],
+    _query_embedding: JSON.stringify(embedding),
+    _match_count: RAG_MATCH_COUNT,
+    _match_threshold: RAG_THRESHOLD,
+  });
+  if (error) {
+    console.error("RAG error:", error.message);
+    return [];
   }
+  return ((data ?? []) as Row[]).map((d) => String(d.content)).filter(Boolean);
+}
+
+const ROLE_PRIORITY = ["parent", "player", "coach", "club_admin", "admin"];
+
+function ageFrom(dob: string | null | undefined): number | null {
+  if (!dob) return null;
+  const d = new Date(dob);
+  if (Number.isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getUTCFullYear() - d.getUTCFullYear();
+  const m = now.getUTCMonth() - d.getUTCMonth();
+  if (m < 0 || (m === 0 && now.getUTCDate() < d.getUTCDate())) age--;
+  return age >= 0 && age < 120 ? age : null;
+}
+
+async function getUserContext(db: Db, userId: string): Promise<UserCtx> {
+  try {
+    const [profile, roles, logs] = await Promise.all([
+      db.from("profiles").select("full_name, date_of_birth, sport, club_name").eq("id", userId).maybeSingle(),
+      db.from("user_roles").select("role").eq("user_id", userId),
+      db.from("daily_logs")
+        .select("log_date, sleep_hours, hydration_liters, energy_level, pain_level, pain_location, mood, trained, training_duration_min")
+        .eq("user_id", userId)
+        .order("log_date", { ascending: false })
+        .limit(3),
+    ]);
+    const p = (profile.data ?? {}) as Row;
+    const roleList = ((roles.data ?? []) as Row[]).map((r) => String(r.role));
+    return {
+      firstName: typeof p.full_name === "string" ? p.full_name.trim().split(/\s+/)[0] || null : null,
+      age: ageFrom(p.date_of_birth),
+      sport: p.sport ?? null,
+      club: p.club_name ?? null,
+      role: ROLE_PRIORITY.find((r) => roleList.includes(r)) ?? roleList[0] ?? null,
+      logs: (logs.data ?? []) as DailyLogCtx[],
+    };
+  } catch (e) {
+    console.error("User context failed:", (e as Error).message);
+    return {};
+  }
+}
+
+/** Últimas filas de la conversación (de la más nueva a la más vieja). Funciona aunque falte la columna client_message_id. */
+async function getRecentRows(db: Db, conversationId: string): Promise<{ rows: Row[]; hasClientId: boolean }> {
+  const q = (cols: string) =>
+    db.from("ai_messages").select(cols).eq("conversation_id", conversationId)
+      .order("created_at", { ascending: false }).limit(HISTORY_ROWS);
+  let res = await q("id, role, content, created_at, client_message_id");
+  let hasClientId = true;
+  if (res.error?.code === MISSING_COLUMN) {
+    hasClientId = false;
+    res = await q("id, role, content, created_at");
+  }
+  if (res.error) console.error("History error:", res.error.message);
+  return { rows: ((res.data ?? []) as Row[]), hasClientId };
+}
+
+async function getRecentUserCount(db: Db, userId: string): Promise<number> {
+  const since = new Date(Date.now() - 3600_000).toISOString();
+  const { count, error } = await db
+    .from("ai_messages")
+    .select("id, ai_conversations!inner(user_id)", { count: "exact", head: true })
+    .eq("role", "user")
+    .gte("created_at", since)
+    .eq("ai_conversations.user_id", userId);
+  if (error) {
+    console.error("Rate limit query failed:", error.message);
+    return 0;
+  }
+  return count ?? 0;
+}
+
+/** Respuestas guardadas justo después de un mensaje del usuario (filas de más nueva a más vieja; devuelve de vieja a nueva). */
+function repliesAfter(rowsNewestFirst: Row[], idx: number): Row[] {
+  const out: Row[] = [];
+  for (let i = idx - 1; i >= 0 && rowsNewestFirst[i].role !== "user"; i--) out.push(rowsNewestFirst[i]);
+  return out;
+}
+
+function replayResponse(userRow: Row, replies: Row[], cors: Record<string, string>) {
+  return jsonResponse({
+    userMessage: { id: userRow.id, created_at: userRow.created_at },
+    respuesta: replies.map((r) => ({ id: r.id, text: r.content, created_at: r.created_at })),
+    derivar: null,
+  }, 200, cors);
+}
+
+/** El mensaje ya existía (carrera o historial largo): devuelve lo que ya se respondió, o avisa que sigue en curso. */
+async function replayOrBusy(db: Db, conversationId: string, clientMessageId: string, cors: Record<string, string>) {
+  const { data: row } = await db.from("ai_messages")
+    .select("id, role, content, created_at")
+    .eq("conversation_id", conversationId)
+    .eq("client_message_id", clientMessageId)
+    .maybeSingle();
+  if (row) {
+    const { data: after } = await db.from("ai_messages")
+      .select("id, role, content, created_at")
+      .eq("conversation_id", conversationId)
+      .gt("created_at", row.created_at)
+      .order("created_at", { ascending: true })
+      .limit(10);
+    const replies: Row[] = [];
+    for (const r of (after ?? []) as Row[]) {
+      if (r.role === "user") break;
+      replies.push(r);
+    }
+    if (replies.length) return replayResponse(row, replies, cors);
+  }
+  return errorResponse(409, "busy", "Previous attempt still running", cors);
+}
+
+Deno.serve(async (req) => {
+  const cors = getCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
   const authedUser = await requireUser(req);
-  if (!authedUser) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-    });
-  }
+  if (!authedUser) return errorResponse(401, "unauthorized", "Unauthorized", cors);
 
   try {
-    const { message, avatar, conversationId } = await req.json();
+    const body = await req.json().catch(() => null);
+    const message = typeof body?.message === "string" ? body.message.trim() : "";
+    const avatar = body?.avatar as AvatarId;
+    const conversationId = body?.conversationId;
+    const clientMessageId =
+      typeof body?.clientMessageId === "string" && body.clientMessageId.length <= 100 ? body.clientMessageId : null;
 
-    if (typeof message !== "string" || message.length > MAX_MESSAGE_CHARS) {
-      return new Response(
-        JSON.stringify({ error: `Invalid message (max ${MAX_MESSAGE_CHARS} chars)` }),
-        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-      );
+    if (!message || message.length > MAX_MESSAGE_CHARS) {
+      return errorResponse(400, "bad_request", `Invalid message (1-${MAX_MESSAGE_CHARS} chars)`, cors);
+    }
+    if (!AVATAR_IDS.includes(avatar) || typeof conversationId !== "string" || !conversationId) {
+      return errorResponse(400, "bad_request", "Required: message, avatar (TINO/ZAHIA/ROMA), conversationId", cors);
     }
 
-    if (!message || !avatar || !["TINO", "ZAHIA", "ROMA"].includes(avatar)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid input. Required: message, avatar (TINO/ZAHIA/ROMA)" }),
-        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-      );
+    const openaiKey = getOpenAIKey();
+    if (!openaiKey) {
+      console.error("OPENAI_API_KEY is not configured");
+      return errorResponse(500, "config", "OpenAI key not configured", cors);
     }
 
-    const OPENAI_KEY = Deno.env.get("key_openai");
-    if (!OPENAI_KEY) {
-      return new Response(
-        JSON.stringify({ error: "OpenAI key not configured" }),
-        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-      );
+    const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const userId = authedUser.id;
+
+    // Etapa 1: solo consultas baratas de base. Propiedad y límite se validan antes de gastar en OpenAI.
+    const [convo, recent, recentUserCount] = await Promise.all([
+      db.from("ai_conversations").select("user_id").eq("id", conversationId).maybeSingle(),
+      getRecentRows(db, conversationId),
+      getRecentUserCount(db, userId),
+    ]);
+
+    if (!convo.data) return errorResponse(409, "gone", "Conversation not found", cors);
+    if (convo.data.user_id !== userId) return errorResponse(403, "forbidden", "Conversation not owned by user", cors);
+
+    // Reintento: el mensaje del usuario ya se guardó en un intento anterior.
+    let existingIdx = -1;
+    if (clientMessageId) {
+      existingIdx = recent.hasClientId
+        ? recent.rows.findIndex((r) => r.client_message_id === clientMessageId)
+        // Sin la columna nueva no hay id: se reconoce el reintento por ser el último mensaje, idéntico y reciente.
+        : (recent.rows[0]?.role === "user" && recent.rows[0].content === message &&
+            Date.now() - new Date(recent.rows[0].created_at).getTime() < RETRY_MATCH_WINDOW_MS ? 0 : -1);
     }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const requestingUserId = authedUser.id;
-
-    // 1. Load conversation history (last 20 messages)
-    let historyMessages: { role: string; content: string }[] = [];
-    if (conversationId) {
-      // Verify the requesting user owns this conversation
-      const { data: convOwner } = await supabase
-        .from("ai_conversations")
-        .select("user_id")
-        .eq("id", conversationId)
-        .maybeSingle();
-
-      if (!convOwner || convOwner.user_id !== requestingUserId) {
-        return new Response(
-          JSON.stringify({ error: "Forbidden: conversation not owned by user" }),
-          { status: 403, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-        );
+    const existing = existingIdx >= 0 ? recent.rows[existingIdx] : null;
+    if (existing) {
+      const answered = repliesAfter(recent.rows, existingIdx);
+      if (answered.length) return replayResponse(existing, answered, cors);
+      // Sin respuesta todavía: si el intento anterior puede seguir vivo, no se genera una segunda.
+      if (Date.now() - new Date(existing.created_at).getTime() < BUSY_WINDOW_MS) {
+        return errorResponse(409, "busy", "Previous attempt still running", cors);
       }
-
-      const { data: msgs } = await supabase
-        .from("ai_messages")
-        .select("role, content")
-        .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: false })
-        .limit(20);
-
-      if (msgs) {
-        historyMessages = msgs.reverse().map((m: any) => ({
-          role: m.role === "user" ? "user" : "assistant",
-          content: m.content,
-        }));
-      }
+    } else if (recentUserCount >= RATE_LIMIT_PER_HOUR) {
+      return errorResponse(429, "rate_limited", "Too many messages", cors);
     }
 
-    // 2. RAG retrieval
-    let ragContext = "";
-    const embedding = await getEmbedding(message, OPENAI_KEY);
-    if (embedding.length > 0) {
-      const tableName = AVATAR_RAG_TABLES[avatar as AvatarId];
-      const { data: docs } = await supabase.rpc("match_rag_documents", {
-        _table_name: tableName,
-        _query_embedding: JSON.stringify(embedding),
-        _match_count: 5,
-        _match_threshold: 0.5,
-      });
+    // Historial anterior al mensaje actual (de viejo a nuevo).
+    const olderRows = (existing ? recent.rows.slice(existingIdx + 1) : recent.rows).slice().reverse();
+    const isFirstMessage = olderRows.length === 0;
+    const history = buildHistory(olderRows as { role: string; content: string }[]).slice(-HISTORY_MESSAGES);
 
-      if (docs && docs.length > 0) {
-        ragContext =
-          "\n\n## CONTEXTO RELEVANTE DE TU BASE DE CONOCIMIENTO:\n" +
-          docs.map((d: any) => d.content).join("\n---\n");
+    // Etapa 2, en paralelo: contexto del chico, RAG y guardado del mensaje del usuario (una sola vez).
+    // El created_at sale del mismo reloj que el de las respuestas, así el orden no depende de dos relojes.
+    const insertUser = (withClientId: boolean) =>
+      db.from("ai_messages")
+        .insert({
+          conversation_id: conversationId,
+          role: "user",
+          content: message,
+          created_at: new Date().toISOString(),
+          ...(withClientId && clientMessageId ? { client_message_id: clientMessageId } : {}),
+        })
+        .select("id, created_at")
+        .single();
+    const saveUserMessage = async () => {
+      let res = await insertUser(true);
+      if (res.error?.code === MISSING_COLUMN) res = await insertUser(false);
+      return res;
+    };
+    const [userCtx, ragChunks, savedUser] = await Promise.all([
+      getUserContext(db, userId),
+      getRagChunks(db, avatar, message, openaiKey),
+      existing ? Promise.resolve(null) : saveUserMessage(),
+    ]);
+
+    let userMessage: { id: string; created_at: string };
+    if (existing) {
+      userMessage = { id: existing.id, created_at: existing.created_at };
+    } else {
+      if (!savedUser || savedUser.error || !savedUser.data) {
+        const code = savedUser?.error?.code;
+        console.error("Insert user message failed:", code, savedUser?.error?.message);
+        if (code === FK_VIOLATION) return errorResponse(409, "gone", "Conversation deleted", cors);
+        if (code === UNIQUE_VIOLATION && clientMessageId) return await replayOrBusy(db, conversationId, clientMessageId, cors);
+        return errorResponse(500, "internal", "Could not save message", cors);
       }
+      userMessage = { id: savedUser.data.id, created_at: savedUser.data.created_at };
     }
 
-    // 3. Build messages for OpenAI
-    const systemPrompt = SYSTEM_PROMPTS[avatar as AvatarId] + ragContext;
-
-    const openaiMessages = [
-      { role: "system", content: systemPrompt },
-      ...historyMessages,
+    // OpenAI
+    const messages = [
+      { role: "system", content: buildSystemPrompt(avatar, userCtx) },
+      ...(ragChunks.length ? [{ role: "system", content: buildReferenceMessage(ragChunks) }] : []),
+      ...history,
       { role: "user", content: message },
     ];
 
-    // 4. Call OpenAI
-    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: openaiMessages,
-        response_format: { type: "json_object" },
-        temperature: 0.7,
-        max_tokens: 1024,
-      }),
-    });
+    let openaiRes: Response;
+    try {
+      openaiRes = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: CHAT_MODEL,
+          messages,
+          response_format: RESPONSE_SCHEMA,
+          temperature: 0.6,
+          max_tokens: 500,
+        }),
+      }, OPENAI_TIMEOUT_MS);
+    } catch (e) {
+      if ((e as Error).name === "TimeoutError") {
+        console.error("OpenAI timeout");
+        return errorResponse(504, "timeout", "AI model timed out", cors);
+      }
+      throw e;
+    }
 
     if (!openaiRes.ok) {
-      const errText = await openaiRes.text();
-      console.error("OpenAI error:", openaiRes.status, errText);
-      return new Response(
-        JSON.stringify({ error: "Error calling AI model" }),
-        { status: 502, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-      );
+      console.error("OpenAI error:", openaiRes.status, await openaiRes.text());
+      return errorResponse(502, "upstream", "Error calling AI model", cors);
     }
 
     const completion = await openaiRes.json();
-    const rawContent = completion.choices?.[0]?.message?.content ?? "";
+    const { respuesta, derivar } = parseModelOutput(completion.choices?.[0]?.message?.content ?? "", avatar);
 
-    // 5. Parse response
-    let respuesta: string[] = [];
-    try {
-      const parsed = JSON.parse(rawContent);
-      if (Array.isArray(parsed.respuesta)) {
-        respuesta = parsed.respuesta.filter((s: any) => typeof s === "string" && s.trim());
-      }
-    } catch {
-      // Fallback: use raw content as single message
-      if (rawContent.trim()) {
-        respuesta = [rawContent.trim()];
-      }
+    // Guardar las partes del agente de una vez, con created_at escalonado para que el orden sea estable.
+    const base = Date.now();
+    const insertRes = await db.from("ai_messages")
+      .insert(respuesta.map((text, i) => ({
+        conversation_id: conversationId,
+        role: "assistant",
+        content: text,
+        created_at: new Date(base + i).toISOString(),
+      })))
+      .select("id, content, created_at");
+    if (insertRes.error || !insertRes.data) {
+      const code = insertRes.error?.code;
+      console.error("Insert assistant messages failed:", code, insertRes.error?.message);
+      if (code === FK_VIOLATION) return errorResponse(409, "gone", "Conversation deleted", cors);
+      return errorResponse(500, "internal", "Could not save reply", cors);
     }
+    const saved = (insertRes.data as Row[]).sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
 
-    if (respuesta.length === 0) {
-      respuesta = ["No pude generar una respuesta. Intentá de nuevo"];
-    }
+    await db.from("ai_conversations")
+      .update({
+        last_message_at: new Date().toISOString(),
+        ...(isFirstMessage ? { title: message.slice(0, 50) } : {}),
+      })
+      .eq("id", conversationId);
 
-    return new Response(
-      JSON.stringify({ respuesta }),
-      { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-    );
+    return jsonResponse({
+      userMessage,
+      respuesta: saved.map((r) => ({ id: r.id, text: r.content, created_at: r.created_at })),
+      derivar,
+    }, 200, cors);
   } catch (e) {
     console.error("avatar-chat error:", e);
-    return new Response(
-      JSON.stringify({ error: "Internal error" }),
-      { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-    );
+    return errorResponse(500, "internal", "Internal error", cors);
   }
 });
