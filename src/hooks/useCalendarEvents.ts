@@ -27,24 +27,20 @@ export interface CalendarEvent {
 export interface EventTypeConfig {
   type: EventType;
   label: string;
-  emoji: string;
-  color: string;
-  bgColor: string;
 }
 
 export const EVENT_TYPES: EventTypeConfig[] = [
-  { type: 'training', label: 'Entrenamiento', emoji: '🏋️', color: 'text-blue-600', bgColor: 'bg-blue-500' },
-  { type: 'nutrition', label: 'Plan nutricional', emoji: '🍎', color: 'text-emerald-600', bgColor: 'bg-emerald-500' },
-  { type: 'mental', label: 'Sesión mental', emoji: '🧠', color: 'text-violet-600', bgColor: 'bg-violet-500' },
-  { type: 'tournament', label: 'Torneo', emoji: '🏆', color: 'text-orange-600', bgColor: 'bg-orange-500' },
-  { type: 'school', label: 'Escolar', emoji: '📚', color: 'text-gray-600', bgColor: 'bg-gray-500' },
-  { type: 'rest', label: 'Descanso', emoji: '🌴', color: 'text-green-600', bgColor: 'bg-green-400' },
-  { type: 'alert', label: 'Alerta', emoji: '⚠️', color: 'text-yellow-600', bgColor: 'bg-yellow-500' },
+  { type: 'training', label: 'Entrenamiento' },
+  { type: 'nutrition', label: 'Nutrición' },
+  { type: 'mental', label: 'Sesión mental' },
+  { type: 'tournament', label: 'Partido o torneo' },
+  { type: 'school', label: 'Escolar' },
+  { type: 'rest', label: 'Descanso' },
+  { type: 'alert', label: 'Aviso' },
 ];
 
-export const getEventConfig = (type: EventType): EventTypeConfig => {
-  return EVENT_TYPES.find(e => e.type === type) || EVENT_TYPES[0];
-};
+export const getEventConfig = (type: EventType): EventTypeConfig =>
+  EVENT_TYPES.find((e) => e.type === type) ?? EVENT_TYPES[0];
 
 type EventRow = {
   id: string; title: string; start_time: string; end_time: string | null; event_type: string | null;

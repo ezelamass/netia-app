@@ -8,7 +8,8 @@
   --slate-soft: 215 25% 94%;
 }
 
-[data-skin="play"] {
+[data-skin="play"],
+:root[data-skin="play"] {
   --primary: 16 88% 44%;
   --primary-foreground: 0 0% 100%;
   --primary-soft: 24 100% 95%;
@@ -25,7 +26,8 @@
 }
 
 .dark [data-skin="play"],
-.dark[data-skin="play"] {
+.dark[data-skin="play"],
+.dark:root[data-skin="play"] {
   /* En oscuro el naranja sube de luminosidad y el texto sobre él pasa a oscuro (contraste ≥ 4.5:1 en ambos sentidos) */
   --primary: 16 90% 58%;
   --primary-foreground: 16 60% 8%;

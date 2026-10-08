@@ -1,171 +1,216 @@
-import { useState, useMemo } from 'react';
-import { startOfWeek, addWeeks, addMonths, subWeeks, subMonths } from 'date-fns';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useCallback, useMemo, useState } from 'react';
+import { addDays, addMonths, addWeeks, format, isSameDay, isSameMonth, startOfWeek, subMonths, subWeeks } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { CalendarPlus, ChevronLeft, ChevronRight, Dumbbell, Plus } from 'lucide-react';
 import { AppLayout } from '@/layouts/AppLayout';
-import { CalendarHeader } from '@/components/calendar/CalendarHeader';
-import { WeekView } from '@/components/calendar/WeekView';
+import { Button } from '@/components/ui/button';
+import { AgendaItem } from '@/components/play/AgendaItem';
+import { IconBadge } from '@/components/play/IconBadge';
+import { StatPill } from '@/components/play/StatPill';
+import { WeekStrip } from '@/components/play/WeekStrip';
 import { MonthView } from '@/components/calendar/MonthView';
-import { CalendarSummary } from '@/components/calendar/CalendarSummary';
-import { DayDetail } from '@/components/calendar/DayDetail';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
-import { EmptyState } from '@/components/ui/empty-state';
-import { useCalendarEvents, CalendarEvent } from '@/hooks/useCalendarEvents';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCalendarEvents, type CalendarEvent, type EventType } from '@/hooks/useCalendarEvents';
+import { getEventIcon, ICONS } from '@/lib/icons';
+import { cn } from '@/lib/utils';
+
+type Filter = 'all' | 'training' | 'nutrition' | 'mental' | 'club';
+type View = 'week' | 'month';
+
+const FILTERS: { id: Filter; label: string }[] = [
+  { id: 'all', label: 'Todo' },
+  { id: 'training', label: 'Entrenos' },
+  { id: 'nutrition', label: 'Nutrición' },
+  { id: 'mental', label: 'Mental' },
+  { id: 'club', label: 'Club' },
+];
+
+const matches = (e: CalendarEvent, f: Filter) => {
+  if (f === 'all') return true;
+  if (f === 'club') return e.source === 'club';
+  if (f === 'training') return e.type === 'training' || e.type === 'tournament';
+  return e.type === f;
+};
+
+const byTime = (a: CalendarEvent, b: CalendarEvent) => (a.startTime ?? '99').localeCompare(b.startTime ?? '99');
 
 const Calendar = () => {
-  const isMobile = useIsMobile();
-  const [view, setView] = useState<'week' | 'month'>(isMobile ? 'week' : 'month');
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [showDayDetail, setShowDayDetail] = useState(false);
-  const [showAddEvent, setShowAddEvent] = useState(false);
-  
-  const {
-    events,
-    addEvent,
-    updateEvent,
-    getEventsForDate,
-    getEventsForWeek,
-    getEventsForMonth,
-    getNextEvent,
-    getWeekStats,
-    getStreak,
-  } = useCalendarEvents();
+  const [view, setView] = useState<View>('week');
+  const [selected, setSelected] = useState(() => new Date());
+  const [filter, setFilter] = useState<Filter>('all');
+  const [done, setDone] = useState<Set<string>>(() => new Set());
+  const [adding, setAdding] = useState(false);
 
-  const handleToggleComplete = (eventId: string, completed: boolean) => {
-    updateEvent(eventId, { isCompleted: completed });
-  };
+  const { events, isLoading, addEvent } = useCalendarEvents();
 
-  const weekStart = useMemo(() => 
-    startOfWeek(currentDate, { weekStartsOn: 1 }), 
-    [currentDate]
+  const weekStart = useMemo(() => startOfWeek(selected, { weekStartsOn: 1 }), [selected]);
+
+  const visible = useMemo(
+    () => events.filter((e) => matches(e, filter)).map((e) => (done.has(e.id) ? { ...e, isCompleted: true } : e)),
+    [events, filter, done],
   );
 
-  const displayEvents = useMemo(() => {
-    return view === 'week' 
-      ? getEventsForWeek(weekStart)
-      : getEventsForMonth(currentDate);
-  }, [view, weekStart, currentDate, events]);
+  const dotsByDay = useMemo(() => {
+    const m: Record<string, EventType[]> = {};
+    for (const e of visible) (m[format(e.date, 'yyyy-MM-dd')] ??= []).push(e.type);
+    return m;
+  }, [visible]);
 
-  const selectedDayEvents = useMemo(() => {
-    if (!selectedDate) return [];
-    return getEventsForDate(selectedDate);
-  }, [selectedDate, events]);
+  const dayEvents = useMemo(() => visible.filter((e) => isSameDay(e.date, selected)).sort(byTime), [visible, selected]);
 
-  const nextEvent = getNextEvent();
-  const weekStats = getWeekStats(weekStart);
-  const streak = getStreak();
+  const weekTrainings = useMemo(() => {
+    const list = events.filter((e) => e.type === 'training' && isSameDay(startOfWeek(e.date, { weekStartsOn: 1 }), weekStart));
+    return { total: list.length, done: list.filter((e) => done.has(e.id)).length };
+  }, [events, weekStart, done]);
 
-  const hasEvents = events.length > 0;
+  const next = useMemo(() => {
+    const now = new Date();
+    return events.find((e) => e.date >= now || isSameDay(e.date, now)) ?? null;
+  }, [events]);
 
-  const handlePrev = () => {
-    if (view === 'week') {
-      setCurrentDate(subWeeks(currentDate, 1));
-    } else {
-      setCurrentDate(subMonths(currentDate, 1));
-    }
-  };
+  const shift = (dir: 1 | -1) => setSelected((d) => (view === 'week' ? (dir > 0 ? addWeeks(d, 1) : subWeeks(d, 1)) : (dir > 0 ? addMonths(d, 1) : subMonths(d, 1))));
 
-  const handleNext = () => {
-    if (view === 'week') {
-      setCurrentDate(addWeeks(currentDate, 1));
-    } else {
-      setCurrentDate(addMonths(currentDate, 1));
-    }
-  };
+  const toggleDone = useCallback((id: string) => setDone((s) => {
+    const n = new Set(s);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  }), []);
 
-  const handleToday = () => {
-    setCurrentDate(new Date());
-  };
+  const title = view === 'month'
+    ? format(selected, 'MMMM yyyy', { locale: es })
+    : isSameMonth(weekStart, addDays(weekStart, 6))
+      ? `${format(weekStart, 'd')} – ${format(addDays(weekStart, 6), 'd MMM', { locale: es })}`
+      : `${format(weekStart, 'd MMM', { locale: es })} – ${format(addDays(weekStart, 6), 'd MMM', { locale: es })}`;
 
-  const handleDayClick = (date: Date) => {
-    setSelectedDate(date);
-    setShowDayDetail(true);
-  };
-
-  const handleAddEvent = (event: Omit<CalendarEvent, 'id'>) => {
-    addEvent(event);
-  };
-
-  const openAddEvent = () => {
-    setShowDayDetail(false);
-    setShowAddEvent(true);
-  };
+  const nextIcon = next ? getEventIcon(next.type) : ICONS.training;
 
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto">
-        {/* Summary widgets */}
-        <CalendarSummary 
-          nextEvent={nextEvent}
-          weekStats={weekStats}
-          streak={streak}
-        />
-        
-        {/* Calendar header */}
-        <CalendarHeader
-          currentDate={view === 'week' ? weekStart : currentDate}
-          view={view}
-          onViewChange={setView}
-          onPrev={handlePrev}
-          onNext={handleNext}
-          onToday={handleToday}
-        />
-        
-        {/* Empty state when no events */}
-        {!hasEvents && (
-          <EmptyState
-            variant="no-events"
-            onAction={() => setShowAddEvent(true)}
-            className="my-6"
+      <div data-page-ready={isLoading ? undefined : ''} className="mx-auto max-w-3xl space-y-4 pb-20">
+        <header className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => shift(-1)} aria-label={view === 'week' ? 'Semana anterior' : 'Mes anterior'}>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="truncate font-heading text-lg font-bold first-letter:uppercase md:text-xl" aria-live="polite">{title}</h1>
+            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => shift(1)} aria-label={view === 'week' ? 'Semana siguiente' : 'Mes siguiente'}>
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button variant="outline" size="sm" className="h-8" onClick={() => setSelected(new Date())}>Hoy</Button>
+            <div role="tablist" aria-label="Vista" className="flex rounded-full bg-muted p-0.5">
+              {(['week', 'month'] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === v}
+                  onClick={() => setView(v)}
+                  className={cn(
+                    'rounded-full px-3 py-1 text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    view === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground',
+                  )}
+                >
+                  {v === 'week' ? 'Semana' : 'Mes'}
+                </button>
+              ))}
+            </div>
+          </div>
+        </header>
+
+        {view === 'week' ? (
+          <WeekStrip
+            weekStart={weekStart}
+            selected={selected}
+            onSelect={setSelected}
+            dotsByDay={dotsByDay}
+            onPrevWeek={() => shift(-1)}
+            onNextWeek={() => shift(1)}
           />
+        ) : (
+          <MonthView month={selected} selected={selected} onSelect={setSelected} dotsByDay={dotsByDay} />
         )}
-        
-        {/* Calendar views */}
-        {hasEvents && (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={`${view}-${currentDate.toISOString()}`}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-            >
-              {view === 'week' ? (
-                <WeekView
-                  weekStart={weekStart}
-                  events={displayEvents}
-                  onDayClick={handleDayClick}
-                />
-              ) : (
-                <MonthView
-                  currentDate={currentDate}
-                  events={displayEvents}
-                  onDayClick={handleDayClick}
-                />
+
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]" role="group" aria-label="Filtrar eventos">
+          {FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              aria-pressed={filter === f.id}
+              onClick={() => setFilter(f.id)}
+              className={cn(
+                'shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                filter === f.id ? 'border-primary bg-primary-soft text-primary' : 'border-border/60 bg-card text-muted-foreground hover:bg-muted',
               )}
-            </motion.div>
-          </AnimatePresence>
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        <section aria-labelledby="agenda-title" className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <h2 id="agenda-title" className="font-heading text-base font-semibold first-letter:uppercase">
+              {isSameDay(selected, new Date()) ? 'Hoy' : format(selected, "EEEE d 'de' MMMM", { locale: es })}
+            </h2>
+            <div className="flex gap-2">
+              <StatPill icon={Dumbbell} value={`${weekTrainings.done}/${weekTrainings.total}`} label="Entrenos hechos esta semana" />
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-[62px] rounded-xl" />)}</div>
+          ) : dayEvents.length ? (
+            <div className="space-y-2">
+              {dayEvents.map((e) => (
+                <AgendaItem
+                  key={e.id}
+                  event={e}
+                  source={e.source === 'club' ? 'club' : 'mio'}
+                  onToggleComplete={toggleDone}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border/80 px-4 py-8 text-center">
+              <IconBadge icon={CalendarPlus} />
+              <p className="text-sm font-medium">{filter === 'all' ? 'Nada planeado para este día' : 'Sin eventos de este tipo'}</p>
+              <Button size="sm" variant="outline" onClick={() => setAdding(true)}>Agregar evento</Button>
+            </div>
+          )}
+        </section>
+
+        {next && !dayEvents.some((e) => e.id === next.id) && (
+          <button
+            type="button"
+            onClick={() => setSelected(next.date)}
+            className="flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card p-3 text-left transition-colors duration-150 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <IconBadge icon={nextIcon.icon} tone={nextIcon.tone} />
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs text-muted-foreground">Lo que viene</span>
+              <span className="block truncate text-sm font-semibold">{next.title}</span>
+              <span className="block text-xs text-muted-foreground first-letter:uppercase">
+                {format(next.date, "EEEE d 'de' MMMM", { locale: es })}{next.startTime ? ` · ${next.startTime}` : ''}
+              </span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          </button>
         )}
-        
-        {/* Day detail sheet */}
-        <DayDetail
-          date={selectedDate}
-          events={selectedDayEvents}
-          open={showDayDetail}
-          onClose={() => setShowDayDetail(false)}
-          onAddEvent={openAddEvent}
-          onToggleComplete={handleToggleComplete}
-        />
-        
-        {/* Add event modal */}
-        <AddEventModal
-          open={showAddEvent}
-          onClose={() => setShowAddEvent(false)}
-          onSave={handleAddEvent}
-          initialDate={selectedDate || new Date()}
-        />
       </div>
+
+      <Button
+        size="icon"
+        onClick={() => setAdding(true)}
+        aria-label="Agregar evento"
+        className="fixed bottom-24 right-4 z-30 h-12 w-12 rounded-full shadow-lg lg:bottom-6 lg:right-6"
+      >
+        <Plus className="h-6 w-6" />
+      </Button>
+
+      <AddEventModal open={adding} onClose={() => setAdding(false)} onSave={(e) => void addEvent(e)} initialDate={selected} />
     </AppLayout>
   );
 };
