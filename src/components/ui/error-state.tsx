@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { 
@@ -10,9 +9,7 @@ import {
   Home,
   MessageSquareOff
 } from 'lucide-react';
-import tinoAvatar from '@/assets/tino-avatar.png';
-import zahiaAvatar from '@/assets/zahia-avatar.png';
-import romaAvatar from '@/assets/roma-avatar.png';
+import { AGENTS } from '@/lib/avatars';
 
 export type ErrorStateVariant = 
   | 'offline' 
@@ -38,11 +35,11 @@ export interface ErrorStateProps {
   className?: string;
 }
 
-// Avatar images mapped correctly (files are swapped)
+// Imágenes por agente
 const AVATAR_IMAGES = {
-  TINO: romaAvatar,
-  ZAHIA: tinoAvatar,
-  ROMA: zahiaAvatar,
+  TINO: AGENTS.TINO.image,
+  ZAHIA: AGENTS.ZAHIA.image,
+  ROMA: AGENTS.ROMA.image,
 };
 
 // Default content for each variant
@@ -127,11 +124,9 @@ export const ErrorState = ({
   const shouldShowGoHome = showGoHome ?? defaults.showGoHome;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+    <div
       className={cn(
+        "animate-in fade-in slide-in-from-bottom-2 duration-300 motion-reduce:animate-none",
         "flex flex-col items-center justify-center text-center p-8 rounded-2xl",
         "bg-destructive/5 border border-destructive/20",
         className
@@ -140,12 +135,7 @@ export const ErrorState = ({
       aria-live="polite"
     >
       {/* Avatar or Icon */}
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="mb-6"
-      >
+      <div className="mb-6">
         {avatar ? (
           <div className="relative">
             <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-background shadow-lg opacity-70 grayscale">
@@ -160,7 +150,7 @@ export const ErrorState = ({
             {defaults.icon}
           </div>
         )}
-      </motion.div>
+      </div>
 
       {/* Title */}
       <h3 className="text-xl font-bold text-foreground mb-2">
@@ -187,6 +177,6 @@ export const ErrorState = ({
           </Button>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 };

@@ -4,9 +4,7 @@ import { CalendarEvent, getEventConfig } from '@/hooks/useCalendarEvents';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import tinoAvatar from '@/assets/tino-avatar.png';
-import zahiaAvatar from '@/assets/zahia-avatar.png';
-import romaAvatar from '@/assets/roma-avatar.png';
+import { AGENTS } from '@/lib/avatars';
 
 interface CalendarSummaryProps {
   nextEvent: CalendarEvent | null;
@@ -15,9 +13,9 @@ interface CalendarSummaryProps {
 }
 
 const avatarImages = {
-  TINO: tinoAvatar,
-  ZAHIA: zahiaAvatar,
-  ROMA: romaAvatar,
+  TINO: AGENTS.TINO.image,
+  ZAHIA: AGENTS.ZAHIA.image,
+  ROMA: AGENTS.ROMA.image,
 };
 
 export const CalendarSummary = ({ nextEvent, weekStats, streak }: CalendarSummaryProps) => {

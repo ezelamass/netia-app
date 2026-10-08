@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getDemoConfigBySlug } from '@/contexts/DemoContext';
+import { ensureDemoMock } from '@/integrations/supabase/client';
 import { demoSession, type DemoScenario } from '@/demo/session';
 import { PageSkeleton } from '@/components/skeletons/PageSkeleton';
 
@@ -18,9 +19,14 @@ const DemoEntry = () => {
 
   useEffect(() => {
     if (!cfg) return;
-    demoSession.start(cfg.role, { scenario, presentation });
-    demoSession.setScenario(scenario);
-    navigate(cfg.dashboard, { replace: true });
+    let cancelled = false;
+    ensureDemoMock().then(() => {
+      if (cancelled) return;
+      demoSession.start(cfg.role, { scenario, presentation });
+      demoSession.setScenario(scenario);
+      navigate(cfg.dashboard, { replace: true });
+    });
+    return () => { cancelled = true; };
   }, [cfg, scenario, presentation, navigate]);
 
   if (!cfg) return <Navigate to="/demo" replace />;

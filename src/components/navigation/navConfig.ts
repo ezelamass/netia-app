@@ -4,6 +4,7 @@ import {
   Activity, Megaphone, Settings, type LucideIcon,
 } from 'lucide-react';
 import type { UserRole } from '@/contexts/AuthContext';
+import { loaders } from '@/routes/lazyPages';
 
 export interface NavItem {
   label: string;
@@ -126,4 +127,48 @@ export const roleLabels: Record<UserRole, string> = {
   coach: 'Entrenador',
   club_admin: 'Administrador de club',
   admin: 'Administrador',
+};
+
+/** Cargador del chunk de cada ruta (las mismas funciones que usa App.tsx con lazy). */
+export const routePrefetch: Record<string, () => Promise<unknown>> = {
+  '/dashboard': loaders.Dashboard,
+  '/training': loaders.Training,
+  '/calendar': loaders.Calendar,
+  '/chat': loaders.Chat,
+  '/achievements': loaders.Achievements,
+  '/leaderboard': loaders.Leaderboard,
+  '/profile': loaders.Profile,
+  '/settings': loaders.Settings,
+  '/parent/dashboard': loaders.ParentDashboard,
+  '/parent/child': loaders.ParentChild,
+  '/parent/medical': loaders.ParentMedical,
+  '/parent/fees': loaders.ParentFees,
+  '/parent/announcements': loaders.ParentAnnouncements,
+  '/club/dashboard': loaders.ClubDashboard,
+  '/club/members': loaders.Members,
+  '/club/teams': loaders.Teams,
+  '/club/fees': loaders.Fees,
+  '/club/fixtures': loaders.Fixtures,
+  '/club/attendance': loaders.Attendance,
+  '/admin/dashboard': loaders.AdminDashboard,
+  '/admin/users': loaders.Users,
+};
+
+const prefetched = new Set<string>();
+
+/** Precarga el chunk de una ruta (una sola vez). Nunca rompe la navegación. */
+export const prefetchRoute = (href: string) => {
+  const load = routePrefetch[href];
+  if (!load || prefetched.has(href)) return;
+  prefetched.add(href);
+  load().catch(() => prefetched.delete(href));
+};
+
+/** Precarga en tiempo ocioso las pestañas principales del rol. */
+export const prefetchMainTabs = (role?: UserRole) => {
+  const hrefs = getMobileNav(role).primary.map((i) => i.href);
+  const run = () => hrefs.forEach(prefetchRoute);
+  const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
+  if (w.requestIdleCallback) w.requestIdleCallback(run);
+  else window.setTimeout(run, 1500);
 };

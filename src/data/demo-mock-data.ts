@@ -1,3 +1,4 @@
+import { DEMO_USER_IDS } from '@/demo/ids';
 /**
  * Mock dataset for demo mode. Mirrors the shape of Supabase tables (snake_case).
  * Built fresh per session so dates stay relative to "today" — call
@@ -9,11 +10,7 @@
  * authenticate with the real demo accounts.
  */
 
-export const DEMO_USER_IDS = {
-  player: '44e44edc-5484-42d9-9f31-22abe945ccae',
-  coach: '5b20db0d-e111-4e6d-bb98-1d8177b49fe1',
-  admin: '078f89c5-0fb1-4ea7-99c0-6e6ce340c41d',
-} as const;
+export { DEMO_USER_IDS };
 
 export const DEMO_CLUB_ID = 'e1000001-de00-4000-a000-c10b00000001';
 

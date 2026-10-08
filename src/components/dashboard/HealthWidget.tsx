@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Droplet, Moon, Heart } from 'lucide-react';
-import { AvatarScene } from '@/components/avatars/AvatarScene';
+import { AgentAvatar } from '@/components/play/AgentAvatar';
 
 interface HealthWidgetProps {
   hydration: number;
@@ -36,11 +36,7 @@ export const HealthWidget = ({
           Salud e Hidratación
         </h3>
         <div className="w-16 h-16">
-          <AvatarScene
-            avatarType="ZAHIA"
-            showParticles={false}
-            enableControls={false}
-          />
+          <AgentAvatar agent="ZAHIA" size={48} float />
         </div>
       </div>
 

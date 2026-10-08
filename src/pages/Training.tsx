@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { Suspense, lazy, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/layouts/AppLayout';
 import { useTrainingPlan, TRAINING_STAGES } from '@/hooks/useTrainingPlan';
@@ -8,7 +8,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   StageProgressBar,
   CycleGoalCard,
-  DiagnosticRadar,
   WeeklyMicrocycle,
   SessionDetail,
   ComplianceCard,
@@ -18,6 +17,8 @@ import { Dumbbell, Sparkles, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { CardSkeleton } from '@/components/skeletons';
 import { Button } from '@/components/ui/button';
+
+const DiagnosticRadar = lazy(() => import('@/components/training/DiagnosticRadar').then((m) => ({ default: m.DiagnosticRadar })));
 
 const Training = () => {
   const { user } = useAuth();
@@ -139,7 +140,9 @@ const Training = () => {
             currentWeek={plan.currentWeek}
             totalWeeks={plan.totalWeeks}
           />
-          <DiagnosticRadar diagnostic={plan.diagnostic} />
+          <Suspense fallback={<CardSkeleton />}>
+            <DiagnosticRadar diagnostic={plan.diagnostic} />
+          </Suspense>
         </div>
 
         {/* Weekly Microcycle */}

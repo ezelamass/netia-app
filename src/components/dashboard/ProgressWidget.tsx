@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Flame, TrendingUp } from 'lucide-react';
-import { AvatarScene } from '@/components/avatars/AvatarScene';
+import { AgentAvatar } from '@/components/play/AgentAvatar';
 
 interface ProgressWidgetProps {
   userName: string;
@@ -43,11 +43,7 @@ export const ProgressWidget = ({
 
         {/* Mini Avatar */}
         <div className="w-20 h-20 relative">
-          <AvatarScene
-            avatarType="TINO"
-            showParticles={false}
-            enableControls={false}
-          />
+          <AgentAvatar agent="TINO" size={48} float />
         </div>
       </div>
 

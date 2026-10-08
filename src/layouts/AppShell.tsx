@@ -1,16 +1,19 @@
-import { Suspense, createContext, useContext, useEffect } from 'react';
+import { Suspense, createContext, lazy, useContext, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Header } from '@/components/dashboard/Header';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { MobileNav } from '@/components/navigation/MobileNav';
+import { prefetchMainTabs } from '@/components/navigation/navConfig';
+import { useAuth } from '@/contexts/AuthContext';
+import '@/styles/play-skin.css';
 import { CommandPaletteProvider } from '@/components/navigation/CommandPalette';
 import { SidebarProvider } from '@/components/ui/sidebar';
-import { DemoBanner } from '@/components/demo/DemoBanner';
+const DemoBanner = lazy(() => import('@/components/demo/DemoBanner').then((m) => ({ default: m.DemoBanner })));
 import { useDemo } from '@/contexts/DemoContext';
 import { PageSkeleton } from '@/components/skeletons/PageSkeleton';
 import { cn } from '@/lib/utils';
-import { ProductTour } from '@/components/demo/ProductTour';
-import { LeadForm } from '@/components/demo/LeadForm';
+const ProductTour = lazy(() => import('@/components/demo/ProductTour').then((m) => ({ default: m.ProductTour })));
+const LeadForm = lazy(() => import('@/components/demo/LeadForm').then((m) => ({ default: m.LeadForm })));
 import { demoSession } from '@/demo/session';
 import { demoUi } from '@/demo/ui';
 import { toast } from 'sonner';
@@ -21,6 +24,19 @@ export const useInsideShell = () => useContext(ShellContext);
 
 export const AppShell = () => {
   const { isDemoMode, presentation } = useDemo();
+  const { user } = useAuth();
+  const playSkin = user?.role === 'player' || user?.role === 'parent';
+
+  // Precarga las pestañas principales del rol cuando el navegador está ocioso.
+  useEffect(() => { prefetchMainTabs(user?.role); }, [user?.role]);
+
+  // La piel también tiene que alcanzar a los portales (drawers, diálogos), que cuelgan de <body>.
+  useEffect(() => {
+    if (!playSkin) return;
+    const root = document.documentElement;
+    root.setAttribute('data-skin', 'play');
+    return () => root.removeAttribute('data-skin');
+  }, [playSkin]);
 
   // A los 3 minutos de demo, una invitación (una sola vez por sesión).
   useEffect(() => {
@@ -43,10 +59,15 @@ export const AppShell = () => {
     <ShellContext.Provider value={true}>
       <SidebarProvider defaultOpen={true}>
         <CommandPaletteProvider>
-          {isDemoMode && <DemoBanner />}
-          {isDemoMode && <ProductTour />}
-          {isDemoMode && <LeadForm />}
+          {isDemoMode && (
+            <Suspense fallback={null}>
+              <DemoBanner />
+              <ProductTour />
+              <LeadForm />
+            </Suspense>
+          )}
           <div
+            data-skin={playSkin ? 'play' : undefined}
             className={cn('min-h-screen-dvh bg-surface flex w-full', isDemoMode && !presentation && 'pt-10')}
             style={{ ['--banner-h' as string]: isDemoMode && !presentation ? '2.5rem' : '0px' }}
           >

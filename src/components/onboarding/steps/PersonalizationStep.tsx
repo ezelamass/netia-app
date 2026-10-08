@@ -7,15 +7,13 @@ import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { motion } from 'framer-motion';
 import { MessageCircle, Volume2, Trophy } from 'lucide-react';
-import tinoAvatar from '@/assets/tino-avatar.png';
-import zahiaAvatar from '@/assets/zahia-avatar.png';
-import romaAvatar from '@/assets/roma-avatar.png';
+import { AGENTS } from '@/lib/avatars';
 
 const avatars = [
   { 
     value: 'tino', 
     name: 'TINO', 
-    image: tinoAvatar, 
+    image: AGENTS.TINO.image, 
     description: 'Entrenador físico',
     gradient: 'from-[hsl(211,100%,35%)] to-[hsl(211,100%,50%)]',
     emoji: '💪'
@@ -23,7 +21,7 @@ const avatars = [
   { 
     value: 'zahia', 
     name: 'ZAHIA', 
-    image: zahiaAvatar, 
+    image: AGENTS.ZAHIA.image, 
     description: 'Nutrición y bienestar',
     gradient: 'from-[hsl(162,100%,39%)] to-[hsl(162,100%,50%)]',
     emoji: '🥗'
@@ -31,7 +29,7 @@ const avatars = [
   { 
     value: 'roma', 
     name: 'ROMA', 
-    image: romaAvatar, 
+    image: AGENTS.ROMA.image, 
     description: 'Entrenadora mental',
     gradient: 'from-[hsl(257,89%,62%)] to-[hsl(280,89%,70%)]',
     emoji: '🧠'

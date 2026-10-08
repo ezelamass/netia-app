@@ -2,9 +2,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import tinoAvatar from '@/assets/tino-avatar.png';
-import zahiaAvatar from '@/assets/zahia-avatar.png';
-import romaAvatar from '@/assets/roma-avatar.png';
+import { AGENTS } from '@/lib/avatars';
 import { 
   Calendar, 
   Trophy, 
@@ -45,9 +43,9 @@ export interface EmptyStateProps {
 }
 
 const AVATAR_IMAGES = {
-  TINO: tinoAvatar,
-  ZAHIA: zahiaAvatar,
-  ROMA: romaAvatar,
+  TINO: AGENTS.TINO.image,
+  ZAHIA: AGENTS.ZAHIA.image,
+  ROMA: AGENTS.ROMA.image,
 };
 
 // Default content for each variant

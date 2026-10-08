@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Brain, Target, Zap } from 'lucide-react';
-import { AvatarScene } from '@/components/avatars/AvatarScene';
+import { AgentAvatar } from '@/components/play/AgentAvatar';
 
 interface TechniqueWidgetProps {
   correctDecisions: number;
@@ -28,11 +28,7 @@ export const TechniqueWidget = ({
           Técnica y Táctica
         </h3>
         <div className="w-16 h-16">
-          <AvatarScene
-            avatarType="ROMA"
-            showParticles={false}
-            enableControls={false}
-          />
+          <AgentAvatar agent="ROMA" size={48} float />
         </div>
       </div>
 

@@ -13,9 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
 import { EVENT_TYPES, EventType, AvatarType, CalendarEvent } from '@/hooks/useCalendarEvents';
 import { cn } from '@/lib/utils';
-import tinoAvatar from '@/assets/tino-avatar.png';
-import zahiaAvatar from '@/assets/zahia-avatar.png';
-import romaAvatar from '@/assets/roma-avatar.png';
+import { AGENTS } from '@/lib/avatars';
 
 interface AddEventModalProps {
   open: boolean;
@@ -26,9 +24,9 @@ interface AddEventModalProps {
 
 const avatars: { id: AvatarType | 'none'; name: string; image?: string }[] = [
   { id: 'none', name: 'Ninguno' },
-  { id: 'TINO', name: 'TINO', image: tinoAvatar },
-  { id: 'ZAHIA', name: 'ZAHIA', image: zahiaAvatar },
-  { id: 'ROMA', name: 'ROMA', image: romaAvatar },
+  { id: 'TINO', name: 'TINO', image: AGENTS.TINO.image },
+  { id: 'ZAHIA', name: 'ZAHIA', image: AGENTS.ZAHIA.image },
+  { id: 'ROMA', name: 'ROMA', image: AGENTS.ROMA.image },
 ];
 
 export const AddEventModal = ({ open, onClose, onSave, initialDate }: AddEventModalProps) => {

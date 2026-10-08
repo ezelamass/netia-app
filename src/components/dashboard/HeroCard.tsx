@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
-import { AvatarScene } from '@/components/avatars/AvatarScene';
-import { AvatarType } from '@/components/avatars/FloatingAvatar';
+import { AgentAvatar } from '@/components/play/AgentAvatar';
+import type { AvatarId as AvatarType } from '@/lib/avatars';
 
 interface HeroCardProps {
   userName: string;
@@ -96,13 +96,9 @@ export const HeroCard = ({ userName, welcomeMessage, avatarType = 'TINO', badge 
         initial={{ opacity: 0, x: 50 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.5, duration: 0.6 }}
-        className="absolute right-0 bottom-0 w-80 h-80 pointer-events-auto"
+        className="absolute right-4 bottom-4 pointer-events-none"
       >
-        <AvatarScene
-          avatarType={avatarType}
-          showParticles={true}
-          enableControls={false}
-        />
+        <AgentAvatar agent={avatarType} size={96} float />
       </motion.div>
     </motion.div>
   );

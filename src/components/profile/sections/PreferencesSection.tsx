@@ -9,9 +9,7 @@ import {
 } from '../EditableField';
 import { UserProfile } from '@/types/profile';
 import { cn } from '@/lib/utils';
-import tinoAvatar from '@/assets/tino-avatar.png';
-import zahiaAvatar from '@/assets/zahia-avatar.png';
-import romaAvatar from '@/assets/roma-avatar.png';
+import { AGENTS } from '@/lib/avatars';
 
 interface PreferencesSectionProps {
   profile: UserProfile;
@@ -19,11 +17,11 @@ interface PreferencesSectionProps {
   isEditing: boolean;
 }
 
-// Avatar images mapped correctly (files are swapped)
+// Imágenes por agente
 const AVATAR_OPTIONS = [
-  { value: 'TINO', label: 'TINO', image: romaAvatar, description: 'Entrenamiento físico' },
-  { value: 'ZAHIA', label: 'ZAHIA', image: tinoAvatar, description: 'Nutrición' },
-  { value: 'ROMA', label: 'ROMA', image: zahiaAvatar, description: 'Mental' },
+  { value: 'TINO', label: 'TINO', image: AGENTS.TINO.image, description: 'Entrenamiento físico' },
+  { value: 'ZAHIA', label: 'ZAHIA', image: AGENTS.ZAHIA.image, description: 'Nutrición' },
+  { value: 'ROMA', label: 'ROMA', image: AGENTS.ROMA.image, description: 'Mental' },
 ] as const;
 
 const COMMUNICATION_MODES = [

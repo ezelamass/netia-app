@@ -5,9 +5,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDemoGuard } from '@/hooks/useDemoGuard';
-import tinoAvatar from '@/assets/tino-avatar.png';
-import zahiaAvatar from '@/assets/zahia-avatar.png';
-import romaAvatar from '@/assets/roma-avatar.png';
+import { AGENTS } from '@/lib/avatars';
 import { AvatarPill, type AvatarId, type AvatarPillAvatar } from '@/components/chat/AvatarPill';
 import { ChatHeader } from '@/components/chat/ChatHeader';
 import { ChatHistoryDrawer, type ConversationMeta } from '@/components/chat/ChatHistoryDrawer';
@@ -43,7 +41,7 @@ const AVATAR_SUGGESTIONS: Record<AvatarId, string[]> = {
 };
 
 const WELCOME_SUGGESTIONS = ['¿Qué entreno hoy?', 'Dame un consejo', '¿Cómo me hidrato mejor?'];
-const AVATAR_IMAGES: Record<AvatarId, string> = { TINO: tinoAvatar, ZAHIA: zahiaAvatar, ROMA: romaAvatar };
+const AVATAR_IMAGES: Record<AvatarId, string> = { TINO: AGENTS.TINO.image, ZAHIA: AGENTS.ZAHIA.image, ROMA: AGENTS.ROMA.image };
 
 function generateId() { return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`; }
 
@@ -66,9 +64,9 @@ const Chat = () => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const avatarOptions: AvatarPillAvatar[] = useMemo(() => [
-    { id: 'TINO', name: 'TINO', image: tinoAvatar, accentClass: 'ring-tino' },
-    { id: 'ZAHIA', name: 'ZAHIA', image: zahiaAvatar, accentClass: 'ring-zahia' },
-    { id: 'ROMA', name: 'ROMA', image: romaAvatar, accentClass: 'ring-roma' },
+    { id: 'TINO', name: 'TINO', image: AGENTS.TINO.image, accentClass: 'ring-tino' },
+    { id: 'ZAHIA', name: 'ZAHIA', image: AGENTS.ZAHIA.image, accentClass: 'ring-zahia' },
+    { id: 'ROMA', name: 'ROMA', image: AGENTS.ROMA.image, accentClass: 'ring-roma' },
   ], []);
 
   // Load all conversation metadata on mount

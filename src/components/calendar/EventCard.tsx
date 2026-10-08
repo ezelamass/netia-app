@@ -2,9 +2,7 @@ import { motion } from 'framer-motion';
 import { Check, Circle } from 'lucide-react';
 import { CalendarEvent, getEventConfig } from '@/hooks/useCalendarEvents';
 import { cn } from '@/lib/utils';
-import tinoAvatar from '@/assets/tino-avatar.png';
-import zahiaAvatar from '@/assets/zahia-avatar.png';
-import romaAvatar from '@/assets/roma-avatar.png';
+import { AGENTS } from '@/lib/avatars';
 
 interface EventCardProps {
   event: CalendarEvent;
@@ -14,9 +12,9 @@ interface EventCardProps {
 }
 
 const avatarImages = {
-  TINO: tinoAvatar,
-  ZAHIA: zahiaAvatar,
-  ROMA: romaAvatar,
+  TINO: AGENTS.TINO.image,
+  ZAHIA: AGENTS.ZAHIA.image,
+  ROMA: AGENTS.ROMA.image,
 };
 
 export const EventCard = ({ event, compact = false, onClick, onToggleComplete }: EventCardProps) => {

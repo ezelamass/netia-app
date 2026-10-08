@@ -1,10 +1,9 @@
-import { createContext, useContext, useCallback, useSyncExternalStore, ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useSyncExternalStore, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trophy, Users, Building2, Heart, type LucideIcon } from 'lucide-react';
-import { resetMockDataset } from '@/integrations/supabase/demo-mock-client';
+import { ensureDemoMock } from '@/integrations/supabase/client';
 import type { UserRole } from '@/contexts/AuthContext';
 import { demoSession, type DemoScenario } from '@/demo/session';
-import { clubStore } from '@/demo/store';
 
 /**
  * Roles de la demo (fuente única para banner y picker).
@@ -100,10 +99,14 @@ export const DemoProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const s = useSyncExternalStore(demoSession.subscribe, demoSession.get);
 
+  // Si hay sesión demo (incluso recargando la página), el mock se trae enseguida.
+  useEffect(() => { if (s.active) void ensureDemoMock(); }, [s.active]);
+
   const demoLogin = useCallback<DemoContextType['demoLogin']>(
     async (role, opts) => {
       const cfg = getDemoConfig(role);
       if (!cfg) return { ok: false, error: `Rol demo desconocido: ${role}` };
+      await ensureDemoMock();
       demoSession.start(role, opts);
       const qs = new URLSearchParams();
       if (opts?.scenario && opts.scenario !== 'inicio') qs.set('escenario', opts.scenario);
@@ -126,8 +129,8 @@ export const DemoProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const resetDemo = useCallback(() => {
-    clubStore.reset();
-    resetMockDataset();
+    import('@/demo/store').then((m) => m.clubStore.reset());
+    ensureDemoMock().then((m) => m.resetMockDataset());
   }, []);
 
   const exitDemo = useCallback(async () => {

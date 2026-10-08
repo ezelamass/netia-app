@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Zap, Activity, CheckCircle2 } from 'lucide-react';
-import { AvatarScene } from '@/components/avatars/AvatarScene';
+import { AgentAvatar } from '@/components/play/AgentAvatar';
 
 interface PhysicalTrainingWidgetProps {
   maxSpeed: number;
@@ -30,11 +30,7 @@ export const PhysicalTrainingWidget = ({
           </h3>
         </div>
         <div className="w-16 h-16">
-          <AvatarScene
-            avatarType="TINO"
-            showParticles={false}
-            enableControls={false}
-          />
+          <AgentAvatar agent="TINO" size={48} float />
         </div>
       </div>
 

@@ -3,9 +3,7 @@ import { ArrowRight, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TodayAction as TodayActionType } from '@/hooks/useDailyLog';
 import { Button } from '@/components/ui/button';
-import tinoAvatar from '@/assets/tino-avatar.png';
-import zahiaAvatar from '@/assets/zahia-avatar.png';
-import romaAvatar from '@/assets/roma-avatar.png';
+import { AGENTS } from '@/lib/avatars';
 
 interface TodayActionProps {
   action: TodayActionType;
@@ -14,9 +12,9 @@ interface TodayActionProps {
 }
 
 const avatarImages = {
-  TINO: tinoAvatar,
-  ZAHIA: zahiaAvatar,
-  ROMA: romaAvatar,
+  TINO: AGENTS.TINO.image,
+  ZAHIA: AGENTS.ZAHIA.image,
+  ROMA: AGENTS.ROMA.image,
 };
 
 const avatarGradients = {

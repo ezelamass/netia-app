@@ -12,7 +12,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { NotificationBell } from '@/components/notifications';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { roleLabels } from '@/components/navigation/navConfig';
 import { useCommandPalette } from '@/components/navigation/CommandPalette';
 import { useTheme } from '@/hooks/useTheme';

@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { footerNav, getNavGroups, roleLabels } from '@/components/navigation/navConfig';
+import { footerNav, getNavGroups, prefetchRoute, roleLabels } from '@/components/navigation/navConfig';
 import { useCommandPalette } from '@/components/navigation/CommandPalette';
 
 export const Sidebar = () => {
@@ -27,7 +27,7 @@ export const Sidebar = () => {
 
   const linkClass =
     'flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground';
-  const activeClass = 'bg-primary/10 text-primary font-medium hover:bg-primary/10 hover:text-primary';
+  const activeClass = 'bg-primary-soft text-primary font-medium hover:bg-primary-soft hover:text-primary';
 
   return (
     <SidebarUI className="hidden lg:flex border-r border-border" collapsible="icon">
@@ -76,7 +76,7 @@ export const Sidebar = () => {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <SidebarMenuButton asChild>
-                          <NavLink to={item.href} className={linkClass} activeClassName={activeClass} aria-label={item.label}>
+                          <NavLink to={item.href} className={linkClass} activeClassName={activeClass} aria-label={item.label} onPointerEnter={() => prefetchRoute(item.href)}>
                             <item.icon className="w-[18px] h-[18px] shrink-0" />
                             {open && <span className="truncate">{item.label}</span>}
                           </NavLink>
@@ -100,7 +100,7 @@ export const Sidebar = () => {
             {footerNav.map((item) => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton asChild>
-                  <NavLink to={item.href} className={linkClass} activeClassName={activeClass} aria-label={item.label}>
+                  <NavLink to={item.href} className={linkClass} activeClassName={activeClass} aria-label={item.label} onPointerEnter={() => prefetchRoute(item.href)}>
                     <item.icon className="w-[18px] h-[18px] shrink-0" />
                     {open && <span className="truncate">{item.label}</span>}
                   </NavLink>

@@ -1,7 +1,5 @@
 import { motion } from 'framer-motion';
-import tinoAvatar from '@/assets/tino-avatar.png';
-import zahiaAvatar from '@/assets/zahia-avatar.png';
-import romaAvatar from '@/assets/roma-avatar.png';
+import { AGENTS } from '@/lib/avatars';
 import { cn } from '@/lib/utils';
 
 type AvatarType = 'tino' | 'zahia' | 'roma';
@@ -13,9 +11,9 @@ interface AvatarGuideProps {
 }
 
 const avatarImages: Record<AvatarType, string> = {
-  tino: tinoAvatar,
-  zahia: zahiaAvatar,
-  roma: romaAvatar,
+  tino: AGENTS.TINO.image,
+  zahia: AGENTS.ZAHIA.image,
+  roma: AGENTS.ROMA.image,
 };
 
 const avatarColors: Record<AvatarType, string> = {
