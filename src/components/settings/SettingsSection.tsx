@@ -1,10 +1,9 @@
-import { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SettingsSectionProps {
-  icon: LucideIcon;
+  icon: ComponentType<{ className?: string }>;
   title: string;
   children: ReactNode;
   danger?: boolean;

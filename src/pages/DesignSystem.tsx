@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Moon, Sun, Users, Wallet, ShieldCheck, CalendarCheck, Inbox } from 'lucide-react';
 import '@/styles/play-skin.css';
@@ -11,23 +11,14 @@ import {
   type Column, type FeeStatus, type MedicalStatus,
 } from '@/components/domain';
 import { AgentAvatar, IconBadge, PreviewBadge, ProgressRing, SectionHeader, StatPill } from '@/components/play';
+import { Rule, Section } from '@/components/design-system/parts';
+import { AiSection } from '@/components/design-system/AiSection';
+import { MotionSection } from '@/components/design-system/MotionSection';
+import { LoadingSection } from '@/components/design-system/LoadingSection';
+import { ChatSection } from '@/components/design-system/ChatSection';
+import { CriterioSection } from '@/components/design-system/CriterioSection';
 
 type Skin = 'club' | 'play';
-
-const Section = ({ id, title, lead, children }: { id: string; title: string; lead?: string; children: ReactNode }) => (
-  <section id={id} aria-labelledby={`${id}-t`} className="scroll-mt-20 border-t border-border py-8 first:border-t-0">
-    <h2 id={`${id}-t`} className="font-heading text-xl font-bold">{title}</h2>
-    {lead && <p className="mb-5 mt-1 max-w-2xl text-sm text-muted-foreground">{lead}</p>}
-    {children}
-  </section>
-);
-
-const Rule = ({ ok, children }: { ok: boolean; children: ReactNode }) => (
-  <li className="flex gap-2 text-sm">
-    <span className={cn('mt-0.5 shrink-0 font-semibold', ok ? 'text-success' : 'text-danger')}>{ok ? 'Sí' : 'No'}</span>
-    <span>{children}</span>
-  </li>
-);
 
 const Swatch = ({ token, cls, note }: { token: string; cls: string; note: string }) => (
   <div className="rounded-lg border border-border bg-card p-2">
@@ -51,6 +42,9 @@ const SWATCHES: { token: string; cls: string; note: string }[] = [
   { token: '--avatar-tino', cls: 'bg-tino', note: 'TINO · entreno' },
   { token: '--avatar-zahia', cls: 'bg-zahia', note: 'ZAHIA · nutrición' },
   { token: '--avatar-roma', cls: 'bg-roma', note: 'ROMA · mente' },
+  { token: '--chat-bg', cls: 'bg-chat-bg', note: 'Fondo del chat (con papel tapiz)' },
+  { token: '--chat-out', cls: 'bg-chat-out', note: 'Burbuja propia (cambia con la piel)' },
+  { token: '--chat-system', cls: 'bg-chat-system', note: 'Chips de sistema y aviso de IA' },
 ];
 
 interface Row { id: string; name: string; cat: string; fee: FeeStatus; med: MedicalStatus; att: number }
@@ -72,7 +66,8 @@ const TONES = Object.keys(TONE_CLASSES) as Tone[];
 
 const NAV = [
   ['principios', 'Principios'], ['color', 'Color'], ['tipografia', 'Tipografía'], ['forma', 'Forma'],
-  ['iconos', 'Íconos'], ['componentes', 'Componentes'], ['estados', 'Estados'], ['reglas', 'Reglas'], ['checklist', 'Checklist'],
+  ['iconos', 'Íconos'], ['ia', 'IA'], ['movimiento', 'Movimiento'], ['carga', 'Carga'], ['chat', 'Chat'],
+  ['componentes', 'Componentes'], ['estados', 'Estados'], ['criterio', 'Criterio visual'], ['reglas', 'Reglas'], ['checklist', 'Checklist'],
 ] as const;
 
 const DesignSystem = () => {
@@ -159,13 +154,13 @@ const DesignSystem = () => {
           </ul>
         </Section>
 
-        <Section id="tipografia" title="Tipografía" lead="Poppins para títulos, Inter para interfaz y datos, Nunito Sans solo en burbujas del chat con IA.">
+        <Section id="tipografia" title="Tipografía" lead="Dos familias: Poppins para títulos (excepción de marca) e Inter para todo lo demás, incluido el chat. Más de una familia en la interfaz es el delator número uno de una pantalla amateur.">
           <div className="space-y-3 rounded-xl border border-border bg-card p-5">
             <p className="font-heading text-3xl font-bold">Título de página · Poppins 700</p>
             <p className="font-heading text-xl font-semibold">Título de sección · Poppins 600</p>
             <p className="text-sm">Texto de interfaz en Inter 14px. El mínimo absoluto en toda la app es 12px.</p>
             <p className="text-sm text-muted-foreground">Texto secundario: <span className="tabular-nums">$ 12.500 · 94% · 18/24</span> con números tabulares.</p>
-            <p className="font-ai text-sm">Burbuja de chat en Nunito Sans: “¡Buen laburo hoy! ¿Cómo sentiste las piernas?”</p>
+            <p className="text-sm">Burbuja de chat en Inter: “¡Buen laburo hoy! ¿Cómo sentiste las piernas?”</p>
           </div>
           <ul className="mt-5 space-y-1.5">
             <Rule ok>Todo número en KPIs, tablas y fechas con <code className="text-xs">tabular-nums</code>.</Rule>
@@ -189,7 +184,7 @@ const DesignSystem = () => {
               <p className="text-xs text-muted-foreground">Totalmente redondos.</p>
             </div>
           </div>
-          <p className="mt-4 text-sm text-muted-foreground">Movimiento: 150–200 ms, ease-out, siempre con <code>prefers-reduced-motion</code> respetado. Ninguna animación en loop salvo el “escribiendo” del chat.</p>
+          <p className="mt-4 text-sm text-muted-foreground">El movimiento tiene su propia sección: tokens de duración y curva, micro interacciones y reglas.</p>
         </Section>
 
         <Section id="iconos" title="Íconos" lead="Solo Lucide, nunca emojis como ícono. Cada concepto usa siempre el mismo (fuente única: src/lib/icons.ts).">
@@ -213,6 +208,11 @@ const DesignSystem = () => {
             {TONES.map((t) => <IconBadge key={t} icon={ICONS.club.icon} tone={t} />)}
           </div>
         </Section>
+
+        <AiSection />
+        <MotionSection />
+        <LoadingSection />
+        <ChatSection />
 
         <Section id="componentes" title="Componentes" lead="Armá las pantallas con estas piezas antes de crear nada nuevo. Los de dominio viven en src/components/domain y el kit Play en src/components/play.">
           <h3 className="mb-2 font-heading text-sm font-semibold text-muted-foreground">Encabezado de página (PageHeader)</h3>
@@ -283,7 +283,7 @@ const DesignSystem = () => {
         <Section id="estados" title="Estados" lead="Toda pantalla con datos resuelve estos cuatro casos. Ninguna queda en blanco.">
           <div className="grid gap-3 sm:grid-cols-2">
             {[
-              ['Cargando', 'Skeleton con la forma del contenido final (PageSkeleton, components/skeletons). Nunca un spinner a pantalla completa.'],
+              ['Cargando', 'Skeleton con shimmer y la forma del contenido final (PageSkeleton, components/skeletons), solo si pasa los 150 ms. Nunca un spinner a pantalla completa.'],
               ['Vacío', 'EmptyPanel con ícono, una frase que explique por qué está vacío y un botón para salir de ahí.'],
               ['Error', 'Mensaje en español que diga qué pasó y qué hacer, con botón “Reintentar”. Nada de códigos técnicos.'],
               ['Datos de ejemplo', 'SampleDataNotice si el dato no es real; PreviewBadge si la función es un mockup.'],
@@ -295,6 +295,8 @@ const DesignSystem = () => {
             ))}
           </div>
         </Section>
+
+        <CriterioSection />
 
         <Section id="reglas" title="Mobile y accesibilidad" lead="Se verifican en 390px y 1440px antes de pedir revisión.">
           <ul className="grid gap-x-8 gap-y-1.5 sm:grid-cols-2">
@@ -317,7 +319,9 @@ const DesignSystem = () => {
             <li>Resolvé carga, vacío y error. Marcá lo que sea de ejemplo.</li>
             <li>Texto en español rioplatense, números con <code>tabular-nums</code>.</li>
             <li>Probá en claro y oscuro, en 390px y 1440px, y navegando solo con teclado.</li>
-            <li>Corré <code>npm run lint</code> y <code>npm run build</code>; si tocaste las 4 pestañas principales, también <code>node scripts/check-budgets.mjs</code>.</li>
+            <li>Toda acción tiene feedback: carga, éxito y error. Nada pasa en silencio.</li>
+            <li>Si lo hizo la IA: va firmado (<code>AIBadge</code> o el avatar del agente) y se puede descartar.</li>
+            <li>Corré <code>npm run lint:ui</code> (criterio visual), <code>npm run lint</code> y <code>npm run build</code>; si tocaste las 4 pestañas principales, también <code>node scripts/check-budgets.mjs</code>.</li>
           </ol>
           <div className="mt-6">
             <Button asChild><Link to="/demo">Ver la app en acción</Link></Button>

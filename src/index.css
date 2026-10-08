@@ -337,3 +337,19 @@ All colors MUST be HSL.
     clip-path: polygon(0 0, 100% 0, 0 100%);
   }
 }
+
+@layer components {
+  /* Anillo fino con el gradiente del equipo (trazo, nunca superficie): rodea un elemento sin tapar su contenido. */
+  .ai-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 2px;
+    background: var(--ai-gradient);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
