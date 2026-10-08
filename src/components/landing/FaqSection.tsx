@@ -4,7 +4,7 @@ export const FAQ_ITEMS = [
   { q: '¿Mis datos están seguros?', a: 'Cada persona ve solo lo que corresponde a su rol. Los datos de salud de menores únicamente los ve la familia vinculada, y recién después de dar su consentimiento. Para el detalle legal, está la Política de Privacidad.' },
   { q: '¿Se puede importar desde Excel?', a: 'Sí. Pegás tu planilla en formato CSV (nombre, apellido, categoría) y los socios se cargan con la cuota del mes generada.' },
   { q: '¿Funciona en el celular?', a: 'Sí. NETIA funciona desde el navegador, en el celular y en la computadora, sin instalar nada.' },
-  { q: '¿Cuánto cuesta?', a: 'Depende de la cantidad de socios. Escribinos y te pasamos una propuesta a medida.' },
+  { q: '¿Cuánto cuesta?', a: 'Lo contrata el club y se lo da a todas sus familias y deportistas. Depende de la cantidad de socios. Escribinos y te pasamos una propuesta a medida.' },
   { q: '¿Cómo se manejan los menores?', a: 'La familia se vincula con un código de un solo uso y da su consentimiento antes de ver los datos de su hijo/a. El consentimiento queda registrado y puede retirarse.' },
   { q: '¿Cobran online las cuotas?', a: 'Hoy registrás los pagos (efectivo, transferencia, Mercado Pago) y NETIA te muestra quién debe. El cobro online es una etapa posterior y la definimos con los clubes piloto.' },
   { q: '¿Hay contrato?', a: 'Lo conversamos en la propuesta. Mientras tanto, podés probar la demo sin registrarte.' },

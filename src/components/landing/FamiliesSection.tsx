@@ -12,7 +12,7 @@ const FamiliesSection = () => (
     <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
       <div>
         <Reveal>
-          <h2 className="font-heading text-3xl font-bold lg:text-4xl">Familias informadas, secretaría tranquila</h2>
+          <h2 className="font-heading text-3xl font-bold lg:text-4xl">El club lo contrata, las familias lo usan</h2>
           <p className="mt-3 text-muted-foreground">Las respuestas llegan antes que las preguntas. Y los datos de los chicos se tratan con cuidado.</p>
         </Reveal>
         <ul className="mt-8 space-y-5">

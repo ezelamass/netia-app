@@ -3,7 +3,7 @@ import { Reveal } from './Reveal';
 const steps = [
   { n: 1, title: 'Creá tu club', text: 'Nombre, ciudad y categorías. Tres pasos y listo.' },
   { n: 2, title: 'Importá tus socios', text: 'Pegá tu planilla en CSV y se cargan con su cuota del mes.' },
-  { n: 3, title: 'Invitá a las familias', text: 'Cada familia se vincula con un código y ve lo de su hijo/a.' },
+  { n: 3, title: 'Invitá a las familias', text: 'Se la das a todas tus familias: cada una se vincula con un código y ve lo de su hijo/a.' },
 ];
 
 const HowItWorksSection = () => (

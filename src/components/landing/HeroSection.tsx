@@ -19,7 +19,7 @@ const HeroSection = ({ onContactClick, onVideoClick }: Props) => (
           Gestioná tu club sin planillas: socios, cuotas y aptos médicos en un solo lugar.
         </h1>
         <p className="mt-5 max-w-xl text-lg text-muted-foreground">
-          NETIA ordena la administración de tu club o asociación y, además, ayuda a tus deportistas a rendir mejor con entrenadores y asistentes de IA.
+          NETIA ordena la administración de tu club y se la das a todas tus familias: ellas ven cuotas, avisos y aptos, y los chicos entrenan con asistentes de IA.
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Button asChild size="lg" className="h-12 px-7 text-base">
