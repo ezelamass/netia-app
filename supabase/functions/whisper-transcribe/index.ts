@@ -1,72 +1,75 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { requireUser, jsonResponse } from "../_shared/auth.ts";
+import { requireUser, errorResponse, jsonResponse } from "../_shared/auth.ts";
+import { getOpenAIKey, fetchWithTimeout } from "../_shared/openai.ts";
 
 const MAX_AUDIO_BYTES = 5 * 1024 * 1024;
+const TRANSCRIBE_TIMEOUT_MS = 25_000;
+const AUDIO_EXTENSIONS = ["webm", "mp4", "m4a", "ogg", "wav", "mp3", "mpega"];
+const MODELS = ["gpt-4o-mini-transcribe", "whisper-1"];
+
+/** Whisper detecta el formato por la extensión: usamos la real si es una conocida. */
+function audioFilename(file: File): string {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  return AUDIO_EXTENSIONS.includes(ext) ? `audio.${ext}` : "audio.webm";
+}
+
+async function transcribe(file: File, model: string, apiKey: string): Promise<Response> {
+  const form = new FormData();
+  form.append("file", file, audioFilename(file));
+  form.append("model", model);
+  form.append("language", "es");
+  return await fetchWithTimeout("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: form,
+  }, TRANSCRIBE_TIMEOUT_MS);
+}
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: getCorsHeaders(req) });
-  }
+  const cors = getCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
   const authedUser = await requireUser(req);
-  if (!authedUser) {
-    return jsonResponse({ error: 'Unauthorized' }, 401, getCorsHeaders(req));
-  }
+  if (!authedUser) return errorResponse(401, "unauthorized", "Unauthorized", cors);
 
   try {
-    const openaiKey = Deno.env.get('key_openai');
+    const openaiKey = getOpenAIKey();
     if (!openaiKey) {
-      return new Response(JSON.stringify({ error: 'OpenAI key not configured' }), {
-        status: 500,
-        headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
-      });
+      console.error("OPENAI_API_KEY is not configured");
+      return errorResponse(500, "config", "OpenAI key not configured", cors);
     }
 
     const formData = await req.formData();
-    const audioFile = formData.get('audio');
-
+    const audioFile = formData.get("audio");
     if (!audioFile || !(audioFile instanceof File)) {
-      return new Response(JSON.stringify({ error: 'No audio file provided' }), {
-        status: 400,
-        headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
-      });
+      return errorResponse(400, "bad_request", "No audio file provided", cors);
     }
-
     if (audioFile.size > MAX_AUDIO_BYTES) {
-      return jsonResponse({ error: 'Audio too large (max 5MB)' }, 413, getCorsHeaders(req));
+      return errorResponse(413, "bad_request", "Audio too large (max 5MB)", cors);
     }
 
-    const whisperForm = new FormData();
-    whisperForm.append('file', audioFile, 'audio.webm');
-    whisperForm.append('model', 'whisper-1');
-    whisperForm.append('language', 'es');
-
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${openaiKey}` },
-      body: whisperForm,
-    });
-
-    if (!response.ok) {
+    let response: Response | null = null;
+    for (const model of MODELS) {
+      try {
+        response = await transcribe(audioFile, model, openaiKey);
+      } catch (e) {
+        if ((e as Error).name === "TimeoutError") return errorResponse(504, "timeout", "Transcription timed out", cors);
+        throw e;
+      }
+      if (response.ok) break;
       const errorText = await response.text();
-      console.error('Whisper API error:', errorText);
-      return new Response(JSON.stringify({ error: 'Transcription failed' }), {
-        status: 500,
-        headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
-      });
+      console.error(`Transcription error (${model}):`, response.status, errorText);
+      // Solo se prueba el modelo de respaldo si el primero no existe o no está habilitado.
+      if (![400, 403, 404].includes(response.status)) break;
     }
+
+    if (!response?.ok) return errorResponse(502, "upstream", "Transcription failed", cors);
 
     const result = await response.json();
-
-    return new Response(JSON.stringify({ text: result.text }), {
-      headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ text: result.text ?? "" }, 200, cors);
   } catch (error) {
-    console.error('Error:', error);
-    return new Response(JSON.stringify({ error: 'Internal error' }), {
-      status: 500,
-      headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
-    });
+    console.error("whisper-transcribe error:", error);
+    return errorResponse(500, "internal", "Internal error", cors);
   }
 });

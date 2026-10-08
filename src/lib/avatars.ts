@@ -17,6 +17,8 @@ export interface AgentConfig {
   colorVar: 'avatar-tino' | 'avatar-zahia' | 'avatar-roma';
   tone: 'tino' | 'zahia' | 'roma';
   icon: LucideIcon;
+  /** Primer mensaje de la burbuja estática, en la voz del agente */
+  greeting: string;
   suggestions: string[];
   /** Palabras clave (en minúscula, sin tildes) para derivar la consulta a este agente */
   keywords: string[];
@@ -32,7 +34,8 @@ export const AGENTS: Record<AvatarId, AgentConfig> = {
     colorVar: 'avatar-tino',
     tone: 'tino',
     icon: Zap,
-    suggestions: ['¿Qué entreno hoy?', '¿Cómo mejoro mi resistencia?', 'Dame un plan', 'Ejercicios de calentamiento'],
+    greeting: 'Buenas! Qué entrenamos hoy?',
+    suggestions: ['¿Qué entreno hoy?', '¿Cómo mejoro mi resistencia?', 'Ejercicios para hoy', 'Ejercicios de calentamiento'],
     keywords: ['entren', 'ejercicio', 'fuerza', 'resistencia', 'velocidad', 'calentar', 'calentamiento', 'musculo', 'rutina'],
   },
   ZAHIA: {
@@ -44,6 +47,7 @@ export const AGENTS: Record<AvatarId, AgentConfig> = {
     colorVar: 'avatar-zahia',
     tone: 'zahia',
     icon: Apple,
+    greeting: 'Hola! Contame qué comiste hoy o qué querés saber',
     suggestions: ['¿Qué como antes de entrenar?', '¿Cuánta agua tomo?', 'Snack saludable', 'Ideas de desayuno'],
     keywords: ['comer', 'como antes', 'comida', 'agua', 'hidrat', 'desayuno', 'merienda', 'almuerzo', 'cena', 'proteina', 'dieta'],
   },
@@ -56,6 +60,7 @@ export const AGENTS: Record<AvatarId, AgentConfig> = {
     colorVar: 'avatar-roma',
     tone: 'roma',
     icon: Brain,
+    greeting: 'Hola! Cómo venís de cabeza hoy?',
     suggestions: ['¿Cómo me concentro?', 'Nervios antes del partido', 'Consejo mental', 'Cómo manejar la presión'],
     keywords: ['nervio', 'miedo', 'ansiedad', 'concentr', 'confianza', 'presion', 'foco', 'estres'],
   },
@@ -65,7 +70,7 @@ export const getAgentImage = (id: AvatarId) => AGENTS[id].image;
 
 const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-/** Otro agente cuya área calza con el texto (o null). No incluye al agente actual. */
+/** Respaldo cuando el modelo no devuelve `derivar`: otro agente cuya área calza con el texto (o null). */
 export function suggestAgentFor(text: string, current: AvatarId): AvatarId | null {
   const t = normalize(text);
   for (const id of AVATAR_IDS) {

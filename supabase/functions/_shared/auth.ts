@@ -25,3 +25,24 @@ export function jsonResponse(body: unknown, status: number, cors: Record<string,
     headers: { ...cors, "Content-Type": "application/json" },
   });
 }
+
+export type ErrorCode =
+  | "unauthorized"
+  | "forbidden"
+  | "bad_request"
+  | "config"
+  | "upstream"
+  | "timeout"
+  | "rate_limited"
+  | "gone"
+  | "internal";
+
+/** Respuesta de error uniforme: `{ error, code }`. El cliente decide el mensaje según `code`. */
+export function errorResponse(
+  status: number,
+  code: ErrorCode,
+  error: string,
+  cors: Record<string, string>,
+) {
+  return jsonResponse({ error, code }, status, cors);
+}

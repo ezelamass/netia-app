@@ -1,14 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { ToastAction, type ToastActionElement } from '@/components/ui/toast';
+import { CHAT_ERROR_TEXT, chatErrorKind, readEdgeError } from '@/lib/edgeError';
 import { AVATAR_IDS, suggestAgentFor, type AvatarId } from '@/lib/avatars';
 import type { ConversationMeta } from '@/components/chat/ChatHistoryDrawer';
 
 export const MAX_CONVERSATIONS = 5;
 const STALE = 5 * 60 * 1000;
-const PART_DELAY_MS = 450;
+const REQUEST_TIMEOUT_MS = 30_000;
+/** Pausa antes de mostrar la siguiente parte: proporcional al largo, como alguien que escribe. */
+const partDelay = (text: string) => Math.min(1400, Math.max(400, 250 + 12 * text.length));
 
 export interface ChatMessage {
   id: string;
@@ -20,8 +24,27 @@ export interface ChatMessage {
   fresh?: boolean;
   /** true mientras el mensaje del usuario todavía no se guardó */
   pending?: boolean;
-  /** Tildes (solo mensajes del usuario), derivadas sin backend: reloj → ✓ → ✓✓ cuando responde el agente */
-  status?: 'sending' | 'sent' | 'read';
+  /** true si el envío falló: se puede reintentar con el mismo `clientMessageId` (no duplica) */
+  failed?: boolean;
+  clientMessageId?: string;
+  /** Tildes (solo mensajes del usuario): reloj → ✓ → ✓✓ cuando responde el agente; alerta si falló */
+  status?: 'sending' | 'sent' | 'read' | 'failed';
+}
+
+interface ServerPart { id: string; text: string; created_at: string }
+interface ChatResponse {
+  userMessage?: { id: string; created_at: string };
+  respuesta?: ServerPart[];
+  derivar?: AvatarId | null;
+}
+
+/** Envío en curso de una conversación: permite cancelarlo (borrar el chat) o vaciarlo (desmontar). */
+interface Inflight {
+  avatar: AvatarId;
+  controller: AbortController;
+  timer?: number;
+  cancelled: boolean;
+  flush?: () => void;
 }
 
 export interface Handoff {
@@ -106,7 +129,7 @@ export function useChat(agent: AvatarId, viewing = true) {
     for (let i = rawMessages.length - 1; i >= 0; i--) {
       const m = rawMessages[i];
       if (m.sender === 'avatar') { replied = true; out[i] = m; continue; }
-      out[i] = { ...m, status: replied ? 'read' : m.pending ? 'sending' : 'sent' };
+      out[i] = { ...m, status: m.failed ? 'failed' : replied ? 'read' : m.pending ? 'sending' : 'sent' };
     }
     return out;
   }, [rawMessages]);
@@ -163,12 +186,107 @@ export function useChat(agent: AvatarId, viewing = true) {
     return data.id;
   }, [qc, userId]);
 
-  const saveMessage = useCallback(async (convoId: string, role: 'user' | 'assistant', content: string) => {
-    await supabase.from('ai_messages').insert({ conversation_id: convoId, role, content });
-    const now = new Date().toISOString();
-    await supabase.from('ai_conversations').update({ last_message_at: now }).eq('id', convoId);
-    patchConvo(convoId, { lastMessageAt: now });
-  }, [patchConvo]);
+  const inflightRef = useRef(new Map<string, Inflight>());
+
+  // Al salir del chat, lo que falta mostrar se vuelca de una vez (ya está guardado en el servidor).
+  useEffect(() => {
+    const inflight = inflightRef.current;
+    return () => { inflight.forEach((e) => e.flush?.()); };
+  }, []);
+
+  const convoExists = useCallback((id: string) =>
+    !!qc.getQueryData<ConversationMeta[]>(convosKey(userId))?.some((c) => c.id === id), [qc, userId]);
+
+  const resolveConvoId = useCallback((target: AvatarId): string | null =>
+    chosen[target] !== undefined
+      ? chosen[target]!
+      : (qc.getQueryData<ConversationMeta[]>(convosKey(userId)) ?? []).find((c) => c.avatar === target)?.id ?? null,
+  [chosen, qc, userId]);
+
+  /** Manda el mensaje al servidor (que lo guarda junto con la respuesta) y muestra las partes escalonadas. */
+  const deliver = useCallback(async (id: string, target: AvatarId, tempId: string, text: string, clientMessageId: string) => {
+    const entry: Inflight = { avatar: target, controller: new AbortController(), cancelled: false };
+    inflightRef.current.set(id, entry);
+    setSending((s) => ({ ...s, [target]: true }));
+    setMessages(id, (prev) => prev.map((m) => (m.id === tempId ? { ...m, pending: true, failed: false } : m)));
+
+    let timedOut = false;
+    const timeout = window.setTimeout(() => { timedOut = true; entry.controller.abort(); }, REQUEST_TIMEOUT_MS);
+    const finish = () => {
+      window.clearTimeout(timeout);
+      // Si ya lo cortó el borrado de la conversación, no pisar el estado de un envío nuevo.
+      if (inflightRef.current.get(id) !== entry) return;
+      inflightRef.current.delete(id);
+      setSending((st) => ({ ...st, [target]: false }));
+    };
+
+    try {
+      const { data, error } = await supabase.functions.invoke<ChatResponse>('avatar-chat', {
+        body: { message: text, avatar: target, conversationId: id, clientMessageId },
+        signal: entry.controller.signal,
+      });
+      window.clearTimeout(timeout);
+      if (entry.cancelled) return;
+      if (error) throw error;
+
+      const parts = (data?.respuesta ?? []).filter((p) => p?.text?.trim());
+      if (!parts.length) throw new Error('empty-response');
+
+      const real = data?.userMessage;
+      setMessages(id, (prev) => prev.map((m) => (m.id === tempId
+        ? { ...m, id: real?.id ?? m.id, timestamp: real?.created_at ?? m.timestamp, pending: false, failed: false }
+        : m)));
+      patchConvo(id, { lastMessageAt: parts[parts.length - 1].created_at });
+
+      const to = data?.derivar ?? suggestAgentFor(text, target);
+      setHandoffs((h) => ({ ...h, [target]: to && to !== target ? { to, text } : null }));
+
+      const append = (p: ServerPart) => {
+        if (!convoExists(id)) return;
+        setMessages(id, (prev) => (prev.some((m) => m.id === p.id) ? prev : [...prev, {
+          id: p.id, sender: 'avatar', avatar: target, text: p.text, timestamp: p.created_at, fresh: true,
+        }]));
+        if (viewingRef.current !== target) setUnread((u) => ({ ...u, [target]: u[target] + 1 }));
+      };
+      let i = 0;
+      const next = () => {
+        append(parts[i++]);
+        if (i >= parts.length) { finish(); return; }
+        entry.timer = window.setTimeout(next, partDelay(parts[i].text));
+      };
+      entry.flush = () => {
+        window.clearTimeout(entry.timer);
+        while (i < parts.length) append(parts[i++]);
+        finish();
+      };
+      next();
+    } catch (err) {
+      finish();
+      if (entry.cancelled) return;
+      const info = timedOut ? { code: 'timeout' as const, message: 'timeout' } : await readEdgeError(err);
+      console.error('Chat error:', info.code, info.message);
+
+      if (info.code === 'gone') {
+        // La conversación ya no existe (se borró desde otro lado): se descarta en silencio.
+        qc.removeQueries({ queryKey: msgsKey(id) });
+        qc.setQueryData<ConversationMeta[]>(convosKey(userId), (prev) => (prev ?? []).filter((c) => c.id !== id));
+        setChosen((c) => { const n = { ...c }; delete n[target]; return n; });
+        return;
+      }
+      setMessages(id, (prev) => prev.map((m) => (m.id === tempId ? { ...m, pending: false, failed: true } : m)));
+      const kind = chatErrorKind(info.code);
+      if (kind === 'session') {
+        toast({
+          title: CHAT_ERROR_TEXT.session,
+          action: createElement(ToastAction, { altText: 'Iniciar sesión', onClick: () => window.location.assign('/login') }, 'Iniciar sesión') as unknown as ToastActionElement,
+        });
+      } else if (kind === 'rate') {
+        toast({ title: CHAT_ERROR_TEXT.rate });
+      } else {
+        toast({ title: `${target} ${CHAT_ERROR_TEXT.retry}` });
+      }
+    }
+  }, [setMessages, patchConvo, convoExists, qc, userId, toast]);
 
   /** Devuelve false si no se pudo enviar (así el input conserva el texto). */
   const sendMessage = useCallback(async (raw: string): Promise<boolean> => {
@@ -176,9 +294,7 @@ export function useChat(agent: AvatarId, viewing = true) {
     const target = agentRef.current;
     if (!text || !userId || sending[target]) return false;
 
-    let convoId = chosen[target] !== undefined
-      ? chosen[target]!
-      : (qc.getQueryData<ConversationMeta[]>(convosKey(userId)) ?? []).find((c) => c.avatar === target)?.id ?? null;
+    let convoId = resolveConvoId(target);
 
     if (!convoId) {
       const total = qc.getQueryData<ConversationMeta[]>(convosKey(userId))?.length ?? 0;
@@ -196,50 +312,29 @@ export function useChat(agent: AvatarId, viewing = true) {
 
     const id = convoId;
     const isFirst = !(qc.getQueryData<ChatMessage[]>(msgsKey(id)) ?? []).some((m) => m.sender === 'user');
-    const userMsgId = newId();
-    setMessages(id, (prev) => [...prev, { id: userMsgId, sender: 'user', avatar: target, text, timestamp: new Date().toISOString(), fresh: true, pending: true }]);
+    const tempId = newId();
+    const clientMessageId = newId();
+    setMessages(id, (prev) => [...prev, {
+      id: tempId, sender: 'user', avatar: target, text, timestamp: new Date().toISOString(),
+      fresh: true, pending: true, clientMessageId,
+    }]);
+    setHandoffs((h) => ({ ...h, [target]: null }));
+    // El título definitivo lo guarda el servidor; acá solo se adelanta en pantalla.
+    if (isFirst) patchConvo(id, { title: text.slice(0, 50) });
 
-    const to = suggestAgentFor(text, target);
-    setHandoffs((h) => ({ ...h, [target]: to ? { to, text } : null }));
-
-    if (isFirst) {
-      const title = text.slice(0, 50);
-      patchConvo(id, { title });
-      void supabase.from('ai_conversations').update({ title }).eq('id', id);
-    }
-
-    setSending((s) => ({ ...s, [target]: true }));
-    void saveMessage(id, 'user', text).then(() =>
-      setMessages(id, (prev) => prev.map((m) => (m.id === userMsgId ? { ...m, pending: false } : m))));
-
-    let clearLater = false;
-    try {
-      const { data, error } = await supabase.functions.invoke('avatar-chat', {
-        body: { message: text, avatar: target, conversationId: id },
-      });
-      if (error) throw new Error(error.message || 'Edge function error');
-      const parts: string[] = Array.isArray(data?.respuesta)
-        ? data.respuesta.filter((s: unknown): s is string => typeof s === 'string' && !!s.trim())
-        : [];
-      if (!parts.length) { toast({ title: `${target} respondió sin contenido` }); return true; }
-
-      parts.forEach((part, i) => {
-        window.setTimeout(() => {
-          setMessages(id, (prev) => [...prev, { id: newId(), sender: 'avatar', avatar: target, text: part, timestamp: new Date().toISOString(), fresh: true }]);
-          void saveMessage(id, 'assistant', part);
-          if (viewingRef.current !== target) setUnread((u) => ({ ...u, [target]: u[target] + 1 }));
-          if (i === parts.length - 1) setSending((st) => ({ ...st, [target]: false }));
-        }, i * PART_DELAY_MS);
-      });
-      clearLater = true;
-    } catch (err) {
-      console.error('Chat error:', err);
-      toast({ title: 'Error al contactar al avatar', description: 'Intentá nuevamente.' });
-    } finally {
-      if (!clearLater) setSending((st) => ({ ...st, [target]: false }));
-    }
+    void deliver(id, target, tempId, text, clientMessageId);
     return true;
-  }, [userId, sending, chosen, qc, toast, createConversation, setMessages, patchConvo, saveMessage]);
+  }, [userId, sending, resolveConvoId, qc, toast, createConversation, setMessages, patchConvo, deliver]);
+
+  /** Reintenta un mensaje fallido con el mismo `clientMessageId`: el servidor no lo duplica. */
+  const retryMessage = useCallback((messageId: string) => {
+    const target = agentRef.current;
+    const id = resolveConvoId(target);
+    if (!id || sending[target]) return;
+    const msg = qc.getQueryData<ChatMessage[]>(msgsKey(id))?.find((m) => m.id === messageId);
+    if (!msg?.failed) return;
+    void deliver(id, target, msg.id, msg.text, msg.clientMessageId ?? newId());
+  }, [resolveConvoId, sending, qc, deliver]);
 
   const selectConversation = useCallback((id: string) => {
     const convo = qc.getQueryData<ConversationMeta[]>(convosKey(userId))?.find((c) => c.id === id);
@@ -250,8 +345,22 @@ export function useChat(agent: AvatarId, viewing = true) {
   const startNewChat = useCallback(() => setChosen((c) => ({ ...c, [agentRef.current]: null })), []);
 
   const deleteConversation = useCallback(async (id: string) => {
-    await supabase.from('ai_messages').delete().eq('conversation_id', id);
-    await supabase.from('ai_conversations').delete().eq('id', id);
+    // Si el agente está respondiendo en esta conversación, se corta primero: no quedan escrituras huérfanas.
+    const entry = inflightRef.current.get(id);
+    if (entry) {
+      entry.cancelled = true;
+      window.clearTimeout(entry.timer);
+      entry.controller.abort();
+      inflightRef.current.delete(id);
+      setSending((s) => ({ ...s, [entry.avatar]: false }));
+    }
+    // Un solo delete: ai_messages.conversation_id tiene ON DELETE CASCADE.
+    const { error } = await supabase.from('ai_conversations').delete().eq('id', id);
+    if (error) {
+      console.error('Delete conversation error:', error);
+      toast({ title: 'No pudimos borrar la conversación', description: 'Probá de nuevo en un momento.' });
+      return;
+    }
     qc.removeQueries({ queryKey: msgsKey(id) });
     qc.setQueryData<ConversationMeta[]>(convosKey(userId), (prev) => (prev ?? []).filter((c) => c.id !== id));
     setChosen((c) => {
@@ -259,7 +368,7 @@ export function useChat(agent: AvatarId, viewing = true) {
       for (const a of AVATAR_IDS) if (next[a] === id) delete next[a];
       return next;
     });
-  }, [qc, userId]);
+  }, [qc, userId, toast]);
 
   const clearHandoff = useCallback((a: AvatarId) => setHandoffs((h) => ({ ...h, [a]: null })), []);
 
@@ -275,6 +384,7 @@ export function useChat(agent: AvatarId, viewing = true) {
     handoff: handoffs[agent],
     clearHandoff,
     sendMessage,
+    retryMessage,
     selectConversation,
     startNewChat,
     deleteConversation,

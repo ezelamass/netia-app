@@ -48,6 +48,7 @@ export type Database = {
           created_at: string
           id: string
           role: string
+          client_message_id: string | null
         }
         Insert: {
           content: string
@@ -55,6 +56,7 @@ export type Database = {
           created_at?: string
           id?: string
           role: string
+          client_message_id?: string | null
         }
         Update: {
           content?: string
@@ -62,6 +64,7 @@ export type Database = {
           created_at?: string
           id?: string
           role?: string
+          client_message_id?: string | null
         }
         Relationships: [
           {

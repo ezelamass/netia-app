@@ -11,6 +11,7 @@
  * guard is now disabled because the mock client makes writes safe.
  */
 
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { buildInitialMockData, mockAvatarReplyParts, newId, type MockDataset } from '@/data/demo-mock-data';
 
 const STORAGE_KEY = 'netia_demo_dataset';
@@ -331,6 +332,14 @@ class MockQuery implements PromiseLike<any> {
         // Mutate in place to keep the array reference consistent
         tableRows.length = 0;
         tableRows.push(...kept);
+        // Igual que ON DELETE CASCADE de la base real
+        if (this.tableName === 'ai_conversations' && removed.length) {
+          const gone = new Set(removed.map(r => r.id));
+          const msgs = getTable('ai_messages');
+          const keptMsgs = msgs.filter(m => !gone.has(m.conversation_id));
+          msgs.length = 0;
+          msgs.push(...keptMsgs);
+        }
         saveDataset();
         return this.shapeResult(removed);
       }
@@ -408,11 +417,45 @@ const handleFunctionInvoke = async (
   options: { body?: any } = {}
 ): Promise<{ data: any; error: any }> => {
   if (fnName === 'avatar-chat') {
-    // Igual que el edge function real: devuelve las partes y el cliente las guarda y escalona.
-    const { message, avatar } = options.body ?? {};
-    const respuesta = mockAvatarReplyParts((avatar ?? 'TINO').toUpperCase(), message ?? '');
+    // Mismo contrato que el edge function real: guarda el mensaje y la respuesta, y devuelve ids y partes.
+    const { message, avatar, conversationId, clientMessageId } = options.body ?? {};
     await new Promise((r) => setTimeout(r, 700));
-    return { data: { respuesta }, error: null };
+
+    const convos = getTable('ai_conversations');
+    const convoIdx = convos.findIndex((c) => c.id === conversationId);
+    if (convoIdx < 0) {
+      const res = new Response(JSON.stringify({ error: 'Conversation not found', code: 'gone' }), { status: 409 });
+      return { data: null, error: new FunctionsHttpError(res) };
+    }
+
+    const msgs = getTable('ai_messages');
+    const isFirst = !msgs.some((m) => m.conversation_id === conversationId);
+    let userRow = clientMessageId ? msgs.find((m) => m.conversation_id === conversationId && m.client_message_id === clientMessageId) : undefined;
+    if (!userRow) {
+      userRow = { id: newId('ai_messages'), conversation_id: conversationId, role: 'user', content: message ?? '', created_at: new Date().toISOString(), client_message_id: clientMessageId };
+      msgs.push(userRow);
+    }
+    const base = Date.now();
+    const parts = mockAvatarReplyParts((avatar ?? 'TINO').toUpperCase(), message ?? '');
+    const replyRows = parts.map((text, i) => ({
+      id: newId('ai_messages'), conversation_id: conversationId, role: 'assistant', content: text, created_at: new Date(base + i).toISOString(),
+    }));
+    msgs.push(...replyRows);
+    convos[convoIdx] = {
+      ...convos[convoIdx],
+      last_message_at: new Date().toISOString(),
+      ...(isFirst ? { title: String(message ?? '').slice(0, 50) } : {}),
+    };
+    saveDataset();
+
+    return {
+      data: {
+        userMessage: { id: userRow.id, created_at: userRow.created_at },
+        respuesta: replyRows.map((r) => ({ id: r.id, text: r.content, created_at: r.created_at })),
+        derivar: null,
+      },
+      error: null,
+    };
   }
   console.warn(`[MockClient] Unhandled edge function: ${fnName}`);
   return { data: null, error: null };

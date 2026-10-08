@@ -136,6 +136,8 @@ Supabase DB ↔ Custom Hooks (useX) ↔ React Context (Auth, Onboarding)
 - **Client**: `src/integrations/supabase/client.ts` (env vars: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`)
 - **Types**: Auto-generated in `src/integrations/supabase/types.ts`
 - **Edge Functions**: All 4 have `verify_jwt = false` in config.toml
+- **Secret de OpenAI**: `OPENAI_API_KEY` (lo leen `avatar-chat`, `whisper-transcribe` y `avatar-rag-upload` vía `_shared/openai.ts`; `key_openai` queda solo como fallback). Opcionales: `ALLOWED_ORIGINS` (dominios extra para CORS) y `OPENAI_CHAT_MODEL` (por defecto `gpt-4o-mini`).
+- **Chat**: `avatar-chat` guarda el mensaje y la respuesta en el servidor y devuelve `{ userMessage, respuesta[{id,text,created_at}], derivar }`; los prompts viven en `supabase/functions/_shared/prompts.ts`. Errores con forma `{ error, code }` (cliente: `src/lib/edgeError.ts`).
 - **Key tables**: profiles, user_roles, player_stats, daily_logs, diagnostic_history, badges, player_badges, ai_conversations, ai_messages
 
 ---
