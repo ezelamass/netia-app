@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, Building2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useDemo } from '@/contexts/DemoContext';
 import { PageTransition } from '@/layouts/PageTransition';
+import { roleHome } from '@/lib/roleHome';
 import LandingNavbar from '@/components/landing/LandingNavbar';
 import HeroSection from '@/components/landing/HeroSection';
 import StatsSection from '@/components/landing/StatsSection';
@@ -12,61 +13,46 @@ import AvatarsSection from '@/components/landing/AvatarsSection';
 import ParentalControlSection from '@/components/landing/ParentalControlSection';
 import CtaBanner from '@/components/landing/CtaBanner';
 import LandingFooter from '@/components/landing/LandingFooter';
-import { DemoRolePickerDialog } from '@/components/demo/DemoRolePickerDialog';
-import { TourProvider, useTour } from '@/components/tour/TourProvider';
 
-const ROLE_DASHBOARD: Record<string, string> = {
-  player: '/dashboard',
-  parent: '/parent/dashboard',
-  coach: '/club/dashboard',
-  club_admin: '/club/dashboard',
-  admin: '/admin/dashboard',
-};
-
-function LandingContent() {
+const LandingPage = () => {
   const { isAuthenticated, user, isLoading } = useAuth();
-  const { isDemoMode } = useDemo();
-  const { startTour, isActive: tourActive, stopTour } = useTour();
   const navigate = useNavigate();
-  const [demoDialogOpen, setDemoDialogOpen] = useState(false);
+  const goDemo = () => navigate('/demo');
+
+  useEffect(() => { document.documentElement.classList.remove('dark'); }, []);
 
   useEffect(() => {
-    // Wait for auth to settle so we don't redirect on a half-loaded state.
     if (isLoading) return;
-    // Demo mode owns its own navigation in DemoContext — don't race it.
-    if (isDemoMode) return;
-    if (isAuthenticated && user) {
-      if (tourActive) stopTour();
-      const target = ROLE_DASHBOARD[user.role] ?? '/dashboard';
-      navigate(target, { replace: true });
-    }
-  }, [isAuthenticated, isDemoMode, isLoading, user, navigate, tourActive, stopTour]);
+    if (isAuthenticated && user) navigate(roleHome(user.role), { replace: true });
+  }, [isAuthenticated, isLoading, user, navigate]);
 
   return (
-    <>
-      <div className="min-h-screen bg-white">
-        <LandingNavbar onDemoClick={() => setDemoDialogOpen(true)} onTourClick={startTour} />
-        <HeroSection onDemoClick={() => setDemoDialogOpen(true)} />
+    <PageTransition>
+      <div className="min-h-screen overflow-x-clip bg-white">
+        <LandingNavbar onDemoClick={goDemo} />
+        <HeroSection onDemoClick={goDemo} />
         <StatsSection />
         <VisionSection />
         <CampusSection />
         <AvatarsSection />
         <ParentalControlSection />
-        <CtaBanner onDemoClick={() => setDemoDialogOpen(true)} />
+        <section className="bg-white px-4 py-10">
+          <div className="mx-auto flex max-w-5xl flex-col items-start gap-4 rounded-2xl border border-secondary/30 bg-secondary/5 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <Building2 className="mt-1 h-6 w-6 shrink-0 text-secondary" aria-hidden="true" />
+              <div>
+                <h2 className="font-heading text-xl font-bold">¿Tenés un club o una asociación deportiva?</h2>
+                <p className="text-sm text-muted-foreground">Mirá cómo NETIA ordena socios, cuotas y aptos médicos y se la da a todas tus familias.</p>
+              </div>
+            </div>
+            <Link to="/clubes" className="inline-flex items-center gap-2 rounded-full bg-secondary px-5 py-2.5 text-sm font-semibold text-white">
+              Ver NETIA para clubes <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+        </section>
+        <CtaBanner onDemoClick={goDemo} />
         <LandingFooter />
       </div>
-
-      <DemoRolePickerDialog open={demoDialogOpen} onOpenChange={setDemoDialogOpen} />
-    </>
-  );
-}
-
-const LandingPage = () => {
-  return (
-    <PageTransition>
-      <TourProvider>
-        <LandingContent />
-      </TourProvider>
     </PageTransition>
   );
 };

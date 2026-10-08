@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { requireUser } from "../_shared/auth.ts";
+
+const MAX_MESSAGE_CHARS = 2000;
 
 type AvatarId = "TINO" | "ZAHIA" | "ROMA";
 
@@ -238,8 +241,23 @@ serve(async (req) => {
     return new Response(null, { headers: getCorsHeaders(req) });
   }
 
+  const authedUser = await requireUser(req);
+  if (!authedUser) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const { message, avatar, conversationId } = await req.json();
+
+    if (typeof message !== "string" || message.length > MAX_MESSAGE_CHARS) {
+      return new Response(
+        JSON.stringify({ error: `Invalid message (max ${MAX_MESSAGE_CHARS} chars)` }),
+        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+      );
+    }
 
     if (!message || !avatar || !["TINO", "ZAHIA", "ROMA"].includes(avatar)) {
       return new Response(
@@ -260,47 +278,34 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Extract requesting user ID from auth token
-    let requestingUserId: string | null = null;
-    const authHeader = req.headers.get("authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.replace("Bearer ", "");
-      try {
-        const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-        const anonClient = createClient(supabaseUrl, anonKey);
-        const { data: { user: tokenUser } } = await anonClient.auth.getUser(token);
-        requestingUserId = tokenUser?.id ?? null;
-      } catch { /* token invalid or missing */ }
-    }
+    const requestingUserId = authedUser.id;
 
     // 1. Load conversation history (last 20 messages)
     let historyMessages: { role: string; content: string }[] = [];
     if (conversationId) {
       // Verify the requesting user owns this conversation
-      if (requestingUserId) {
-        const { data: convOwner } = await supabase
-          .from("ai_conversations")
-          .select("user_id")
-          .eq("id", conversationId)
-          .single();
+      const { data: convOwner } = await supabase
+        .from("ai_conversations")
+        .select("user_id")
+        .eq("id", conversationId)
+        .maybeSingle();
 
-        if (convOwner && convOwner.user_id !== requestingUserId) {
-          return new Response(
-            JSON.stringify({ error: "Forbidden: conversation not owned by user" }),
-            { status: 403, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-          );
-        }
+      if (!convOwner || convOwner.user_id !== requestingUserId) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden: conversation not owned by user" }),
+          { status: 403, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+        );
       }
 
       const { data: msgs } = await supabase
         .from("ai_messages")
         .select("role, content")
         .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true })
+        .order("created_at", { ascending: false })
         .limit(20);
 
       if (msgs) {
-        historyMessages = msgs.map((m: any) => ({
+        historyMessages = msgs.reverse().map((m: any) => ({
           role: m.role === "user" ? "user" : "assistant",
           content: m.content,
         }));
@@ -388,7 +393,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("avatar-chat error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "Internal error" }),
       { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   }

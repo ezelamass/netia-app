@@ -3,7 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/logo.png" type="image/png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#007BFF" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <!--
       `google` no-translate hint: stops Chrome / Edge from auto-translating
       the page when a user's browser thinks it should "translate to Spanish".
@@ -11,21 +13,38 @@
       from being mistranslated to "Aviones" in some user browsers.
     -->
     <meta name="google" content="notranslate" />
-    <title>NETIA - Plataforma Educativa Deportiva</title>
-    <meta name="description" content="NETIA: Plataforma educativa deportiva con IA para jóvenes atletas" />
+    <script>
+      // Dark mode al boot (evita parpadeo): solo si netia_settings lo pide
+      (function () {
+        try {
+          var t = 'light';
+          var raw = localStorage.getItem('netia_settings');
+          if (raw) { var a = JSON.parse(raw).appearance; if (a && a.theme) t = a.theme; }
+          // Blanco por defecto: solo modo oscuro si la persona lo eligió, y nunca en las páginas públicas.
+          var pub = /^\/(clubes|login|register)?\/?$/.test(location.pathname);
+          var dark = t === 'dark' && !pub;
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
+    <title>NETIA · Software para gestión de clubes y asociaciones deportivas</title>
+    <meta name="description" content="Socios, cuotas, aptos médicos, asistencia y comunicación con las familias en un solo lugar. Probá la demo sin registrarte." />
     <meta name="author" content="NETIA" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <meta property="og:title" content="NETIA - Plataforma Educativa Deportiva" />
-    <meta property="og:description" content="NETIA: Plataforma educativa deportiva con IA para jóvenes atletas" />
+    <meta property="og:title" content="NETIA · Software para gestión de clubes y asociaciones deportivas" />
+    <meta property="og:description" content="Socios, cuotas, aptos médicos, asistencia y comunicación con las familias en un solo lugar. Probá la demo sin registrarte." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/logo.png" />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="es_AR" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@NETIA" />
-    <meta name="twitter:image" content="/logo.png" />
+    <meta name="twitter:image" content="/og-image.png" />
   </head>
 
   <body>

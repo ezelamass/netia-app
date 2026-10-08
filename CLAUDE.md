@@ -17,7 +17,10 @@ Examples: `npx supabase db push`, `npx supabase functions deploy`, `npx supabase
 
 ## Project Overview
 
-NETIA Futuro Brillante is an AI-powered sports training platform targeting young athletes (initially ages 8-16, expanding to all ages). It provides athlete profiling, training recommendations, wellness tracking, gamification, and AI avatar-based interaction. The entire UI is in **Spanish (es-AR)**.
+NETIA es un software de **gestión para clubes y asociaciones deportivas**. **Compra el club**; lo usan **las familias y los chicos**. Cubre socios, categorías, cuotas, aptos médicos, asistencia, comunicación e informes, y suma como diferencial asistentes IA (TINO, ZAHIA, ROMA), semáforo de riesgo y gamificación para los deportistas. Toda la UI está en **español rioplatense (es-AR, voseo)**. Fondo blanco por defecto; el modo oscuro es opt-in desde Ajustes.
+
+- `/` landing general (estilo original), `/clubes` landing para clubes y asociaciones, `/demo` demo 100% en el navegador.
+- Los módulos de club (cuotas, categorías, asistencia, partidos, comunicación) usan datos de ejemplo hasta que existan sus tablas; en modo real muestran `SampleDataNotice`.
 
 ---
 
@@ -54,7 +57,8 @@ src/
 │   ├── enrollment/   # Club enrollment
 │   ├── family/       # Parent features
 │   ├── gamification/ # XP, badges, levels
-│   ├── landing/      # Landing page
+│   ├── landing/      # Landing general; landing/clubs/ = landing de clubes
+│   ├── domain/       # KpiCard, StatusChip, DataTable, PageHeader, FilterBar
 │   ├── leaderboard/  # Rankings
 │   ├── medical/      # Medical clearance
 │   ├── navigation/   # Sidebar, header, mobile nav
@@ -75,13 +79,15 @@ src/
 │       └── types.ts  # Auto-generated DB types
 ├── types/            # TypeScript type definitions
 ├── lib/              # Utilities (cn(), recommendation logic)
-├── layouts/          # AppLayout, PageTransition
+├── layouts/          # AppShell (layout route con Outlet), PageTransition, AppLayout (wrapper de compatibilidad)
+├── demo/             # Motor de la demo: dataset determinístico, store, selectors (sin red)
+├── config/           # contact.ts (canal de contacto), media.ts (video institucional)
 ├── data/             # Static/mock data
 └── assets/           # Images, icons
 
 supabase/
 ├── config.toml       # Project config (ID: doeqebxhzctlhizcphkq)
-├── migrations/       # 9 SQL migration files
+├── migrations/       # SQL migrations (ver docs/aplicar-produccion.md para las pendientes)
 └── functions/        # Edge Functions
     ├── avatar-chat/           # AI avatar conversations
     ├── avatar-rag-upload/     # RAG document ingestion
@@ -118,6 +124,8 @@ Supabase DB ↔ Custom Hooks (useX) ↔ React Context (Auth, Onboarding)
 | `coach` | Roster, training load, reports, communication |
 | `club_admin` | Club dashboard + coach features |
 | `admin` | System-wide user management, analytics, settings |
+
+`coach` y `club_admin` no se pueden elegir al registrarse (solo `player`/`parent`, forzado en el trigger `handle_new_user`); se asignan por administración.
 
 ---
 
@@ -158,3 +166,15 @@ npm run preview   # Preview production build
 
 - Deployed on **Vercel** (SPA routing configured in `vercel.json`)
 - Environment variables set via Vercel dashboard (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`)
+
+---
+
+## Demo
+
+- Corre 100% en el navegador (`src/demo/*`, `DemoContext`); sin cuentas ni llamadas a `supabase.co`. Roles: club (director), entrenador, familia, jugador. Deep links: `/demo/club|entrenador|familia|jugador`, `?escenario=` y `?modo=presentacion`.
+- Todo dato mostrado es de ejemplo ("Club Atlético Los Ceibos", ficticio). No inventar cifras, clubes ni testimonios.
+- `scripts/capture-screens.mjs` genera las capturas de `public/landing/` (Playwright).
+
+## Producción pendiente
+
+Migraciones, deploys y limpieza de cuentas demo se aplican según `docs/aplicar-produccion.md`. No hacer `db push` sin OK de Ezequiel.

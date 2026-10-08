@@ -48,24 +48,40 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 23%;
 
-    --muted: 216 33% 97%; /* #F5F7FA */
-    --muted-foreground: 0 0% 36%; /* #5C5C5C */
+    --muted: 214 32% 96%;
+    --muted-foreground: 215 16% 40%; /* AA sobre blanco */
+
+    --surface: 210 40% 98%; /* fondo de página */
+    --surface-raised: 0 0% 100%;
 
     --accent: 211 100% 50%;
     --accent-foreground: 0 0% 100%;
     
-    --success: 162 100% 39%;
-    --warning: 38 92% 50%;
-    --danger: 339 90% 51%;
+    --success: 160 84% 30%;
+    --success-foreground: 0 0% 100%;
+    --success-soft: 152 76% 94%;
+    --warning: 32 95% 40%;
+    --warning-foreground: 0 0% 100%;
+    --warning-soft: 43 96% 92%;
+    --danger: 350 80% 46%;
+    --danger-foreground: 0 0% 100%;
+    --danger-soft: 354 90% 95%;
+    --info: 211 100% 42%;
+    --info-foreground: 0 0% 100%;
+    --info-soft: 214 100% 95%;
 
-    --destructive: 339 90% 51%;
+    --destructive: 350 80% 46%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 216 33% 90%;
-    --input: 216 33% 90%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
     --ring: 211 100% 50%;
 
-    --radius: 1rem;
+    --radius: 0.625rem; /* datos: cards, tablas, inputs */
+    --radius-lg: 1rem; /* modales y hero */
+
+    --shadow-card: 0 1px 2px hsl(215 25% 20% / 0.05), 0 1px 3px hsl(215 25% 20% / 0.06);
+    --shadow-pop: 0 8px 24px hsl(215 25% 20% / 0.12);
     
     /* Gradients */
     --gradient-netia: linear-gradient(135deg, hsl(211 100% 50%), hsl(18 100% 61%));
@@ -84,41 +100,73 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 0 0% 10%;
-    --foreground: 0 0% 98%;
+    --background: 222 28% 9%;
+    --foreground: 210 20% 96%;
 
-    --card: 0 0% 12%;
-    --card-foreground: 0 0% 98%;
+    --surface: 222 30% 7%;
+    --surface-raised: 222 26% 12%;
 
-    --popover: 0 0% 12%;
-    --popover-foreground: 0 0% 98%;
+    --card: 222 26% 12%;
+    --card-foreground: 210 20% 96%;
 
-    --primary: 211 100% 50%;
+    --popover: 222 26% 12%;
+    --popover-foreground: 210 20% 96%;
+
+    --primary: 211 100% 56%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 18 100% 61%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 222 22% 16%;
+    --muted-foreground: 215 16% 68%;
 
-    --accent: 211 100% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 222 22% 18%;
+    --accent-foreground: 210 20% 96%;
 
-    --destructive: 339 90% 51%;
+    --success: 158 64% 52%;
+    --success-foreground: 222 30% 8%;
+    --success-soft: 158 40% 14%;
+    --warning: 38 92% 56%;
+    --warning-foreground: 222 30% 8%;
+    --warning-soft: 38 50% 14%;
+    --danger: 352 90% 66%;
+    --danger-foreground: 222 30% 8%;
+    --danger-soft: 352 50% 16%;
+    --info: 211 100% 66%;
+    --info-foreground: 222 30% 8%;
+    --info-soft: 211 50% 16%;
+
+    --destructive: 352 90% 62%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 211 100% 50%;
-    
-    --netia-text-primary: 0 0% 98%;
-    --netia-text-secondary: 0 0% 75%;
-    --netia-text-disabled: 0 0% 50%;
+    --border: 222 18% 20%;
+    --input: 222 18% 20%;
+    --ring: 211 100% 60%;
+
+    --netia-text-primary: 210 20% 96%;
+    --netia-text-secondary: 215 16% 75%;
+    --netia-text-disabled: 215 12% 50%;
+    --netia-bg-light: 222 22% 14%;
+    --netia-bg-lighter: 222 24% 11%;
+
+    --sidebar-background: 222 28% 10%;
+    --sidebar-foreground: 210 20% 92%;
+    --sidebar-primary: 211 100% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 22% 16%;
+    --sidebar-accent-foreground: 210 20% 96%;
+    --sidebar-border: 222 18% 20%;
+    --sidebar-ring: 211 100% 60%;
   }
 }
 
 @layer utilities {
+  .tabular { font-variant-numeric: tabular-nums; }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .h-screen-dvh { height: 100dvh; }
+  .min-h-screen-dvh { min-height: 100dvh; }
+
   /* NETIA Gradients */
   .gradient-netia {
     background: linear-gradient(135deg, hsl(211 100% 50%), hsl(18 100% 61%));
@@ -169,6 +217,18 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+    overflow-x: hidden;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  @media print {
+    .no-print { display: none !important; }
+    body { background: #fff; color: #000; }
   }
   
   h1, h2, h3, h4, h5, h6 {

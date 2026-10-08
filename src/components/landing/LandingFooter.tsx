@@ -13,7 +13,7 @@ const footerSections = [
     links: [
       { label: 'Campus', href: '#campus' },
       { label: 'Avatares', href: '#avatares' },
-      { label: 'Planes', href: '#planes' },
+      { label: 'Planes', href: '/clubes#planes' },
       { label: 'Blogs', href: '#' },
     ],
   },

@@ -1,7 +1,6 @@
 import { AppLayout } from '@/layouts/AppLayout';
 import { TodayCard } from '@/components/dashboard/TodayCard';
 import { ProgressWidget } from '@/components/dashboard/ProgressWidget';
-import { SailingCalendarWidget } from '@/components/dashboard/SailingCalendarWidget';
 import { HealthWidget } from '@/components/dashboard/HealthWidget';
 import { TechniqueWidget } from '@/components/dashboard/TechniqueWidget';
 import { PhysicalTrainingWidget } from '@/components/dashboard/PhysicalTrainingWidget';
@@ -66,7 +65,7 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Second Row - Health and Sailing */}
+      {/* Second Row - Health */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {isLoading ? (
           <CardSkeleton />
@@ -78,14 +77,6 @@ const Dashboard = () => {
             delay={0.2}
           />
         )}
-        <SailingCalendarWidget
-          hoursNavigated={0}
-          averageSpeed={0}
-          windDirection="—"
-          windSpeed={0}
-          successfulManeuvers={0}
-          delay={0.25}
-        />
       </div>
 
       {/* Third Row - Technique and Physical */}

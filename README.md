@@ -1,73 +1,43 @@
-# Welcome to your Lovable project
+# NETIA Futuro Brillante
 
-## Project info
+Plataforma de gestión para clubes y asociaciones deportivas: socios, cuotas, aptos médicos, asistencia y comunicación con las familias.
 
-**URL**: https://lovable.dev/projects/1726d688-36bc-4d15-9cac-afcea04babf5
+## Desarrollo local
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/1726d688-36bc-4d15-9cac-afcea04babf5) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Requisitos: Node.js y npm ([instalación con nvm](https://github.com/nvm-sh/nvm#installing-and-updating)).
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# 1. Clonar el repositorio
+git clone <URL_DEL_REPO>
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# 2. Entrar a la carpeta
+cd netia-futuro-brillante
 
-# Step 3: Install the necessary dependencies.
+# 3. Instalar dependencias
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 4. Levantar el servidor de desarrollo
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Variables de entorno necesarias (en `.env`): `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Scripts
 
-**Use GitHub Codespaces**
+| Comando | Qué hace |
+|---------|----------|
+| `npm run dev` | Servidor de desarrollo |
+| `npm run build` | Build de producción |
+| `npm run lint` | ESLint |
+| `npm run preview` | Previsualiza el build |
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Stack
 
-## What technologies are used for this project?
+- Vite, TypeScript, React 18
+- Tailwind CSS + shadcn/ui
+- Supabase (Postgres, Auth, Edge Functions)
+- TanStack React Query, React Router, React Hook Form + Zod
 
-This project is built with:
+## Deploy
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/1726d688-36bc-4d15-9cac-afcea04babf5) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Deploy en Vercel (configuración SPA en `vercel.json`). Las variables de entorno se cargan en el dashboard de Vercel.
