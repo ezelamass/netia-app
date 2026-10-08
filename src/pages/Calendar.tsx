@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { addDays, addMonths, addWeeks, format, isSameDay, isSameMonth, startOfWeek, subMonths, subWeeks } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CalendarPlus, ChevronLeft, ChevronRight, Dumbbell, Plus } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/layouts/AppLayout';
 import { Button } from '@/components/ui/button';
 import { AgendaItem } from '@/components/play/AgendaItem';
@@ -39,7 +40,11 @@ const Calendar = () => {
   const [view, setView] = useState<View>('week');
   const [selected, setSelected] = useState(() => new Date());
   const [filter, setFilter] = useState<Filter>('all');
-  const [done, setDone] = useState<Set<string>>(() => new Set());
+  const { user } = useAuth();
+  const doneKey = `netia_cal_done_${user?.id ?? 'anon'}`;
+  const [done, setDone] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(doneKey) ?? '[]') as string[]); } catch { return new Set(); }
+  });
   const [adding, setAdding] = useState(false);
 
   const { events, isLoading, addEvent } = useCalendarEvents();
@@ -74,8 +79,9 @@ const Calendar = () => {
   const toggleDone = useCallback((id: string) => setDone((s) => {
     const n = new Set(s);
     if (n.has(id)) n.delete(id); else n.add(id);
+    try { localStorage.setItem(doneKey, JSON.stringify([...n])); } catch { /* sin storage */ }
     return n;
-  }), []);
+  }), [doneKey]);
 
   const title = view === 'month'
     ? format(selected, 'MMMM yyyy', { locale: es })

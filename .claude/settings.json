@@ -6,7 +6,10 @@
       "Bash(npx supabase functions list:*)",
       "mcp__Supabase__execute_sql",
       "mcp__Supabase__apply_migration",
-      "mcp__Supabase__deploy_edge_function"
+      "mcp__Supabase__deploy_edge_function",
+      "Bash(curl https://api.supabase.com/*)",
+      "Bash(npx supabase db:*)",
+      "Bash(npx supabase migration:*)"
     ]
   }
 }
