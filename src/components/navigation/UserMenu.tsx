@@ -1,6 +1,7 @@
 import { LogOut, User, Settings, ChevronsUpDown, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
@@ -13,11 +14,10 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { roleLabels } from '@/components/navigation/navConfig';
-import { prefetchRoute } from '@/components/navigation/navConfig';
+import { prefetchRoute, roleLabels } from '@/components/navigation/navConfig';
 
 const initials = (name: string) =>
-  name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+  name.split(/\s+/).filter(Boolean).map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 
 interface UserMenuProps {
   /** `sidebar`: bloque abajo a la izquierda (se adapta al sidebar colapsado). `header`: avatar compacto (mobile). */
@@ -30,8 +30,8 @@ export const UserMenu = ({ variant, expanded = true }: UserMenuProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     toast.success('Sesión cerrada');
     navigate('/login');
   };
@@ -39,7 +39,7 @@ export const UserMenu = ({ variant, expanded = true }: UserMenuProps) => {
   const avatar = (
     <Avatar className="w-8 h-8 shrink-0">
       <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
-        {user?.name ? initials(user.name) : 'U'}
+        {initials(user?.name ?? '') || 'U'}
       </AvatarFallback>
     </Avatar>
   );
@@ -49,7 +49,7 @@ export const UserMenu = ({ variant, expanded = true }: UserMenuProps) => {
       <button
         type="button"
         aria-label="Menú de usuario"
-        className="flex w-full items-center gap-2.5 rounded-md p-2 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-muted"
+        className={cn('flex w-full items-center gap-2.5 rounded-md text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-muted', expanded ? 'p-2' : 'justify-center p-0')}
       >
         {avatar}
         {expanded && (
@@ -69,9 +69,19 @@ export const UserMenu = ({ variant, expanded = true }: UserMenuProps) => {
       </Button>
     );
 
+  const collapsed = variant === 'sidebar' && !expanded;
   const menu = (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      {collapsed ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">{user?.name}</TooltipContent>
+        </Tooltip>
+      ) : (
+        <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      )}
       <DropdownMenuContent
         side={variant === 'sidebar' ? 'top' : 'bottom'}
         align={variant === 'sidebar' ? 'start' : 'end'}
@@ -100,13 +110,5 @@ export const UserMenu = ({ variant, expanded = true }: UserMenuProps) => {
     </DropdownMenu>
   );
 
-  if (variant === 'sidebar' && !expanded) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{menu}</TooltipTrigger>
-        <TooltipContent side="right" className="font-medium">{user?.name}</TooltipContent>
-      </Tooltip>
-    );
-  }
   return menu;
 };
