@@ -91,7 +91,7 @@ export const useGamification = () => {
         requirement: badge.requirement,
         isUnlocked,
         current,
-        progress: Math.min((current / badge.requirement) * 100, 100),
+        progress: badge.requirement > 0 ? Math.min((current / badge.requirement) * 100, 100) : isUnlocked ? 100 : 0,
       };
     });
   }, [logs, getStreak, getXP, dbBadges, earnedBadgeIds]);

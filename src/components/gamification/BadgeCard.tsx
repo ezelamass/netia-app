@@ -32,7 +32,7 @@ const CATEGORY_TONE: Record<string, Tone> = {
 
 export const BadgeCard = memo(({ badge, compact, celebrate, className, style }: BadgeCardProps) => {
   const tone = TONE_CLASSES[CATEGORY_TONE[badge.category] ?? 'orange'];
-  const progress = Math.max(0, Math.min(100, badge.progress));
+  const progress = Number.isFinite(badge.progress) ? Math.max(0, Math.min(100, badge.progress)) : 0;
   const shown = useGrowIn(progress);
 
   if (compact) {
