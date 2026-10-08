@@ -9,6 +9,7 @@ const VideoModal = ({ open, onOpenChange }: { open: boolean; onOpenChange: (o: b
       {open && INSTITUTIONAL_VIDEO.src && (
         <video controls preload="none" poster={INSTITUTIONAL_VIDEO.poster} className="w-full rounded-lg" playsInline>
           <source src={INSTITUTIONAL_VIDEO.src} type="video/mp4" />
+          <track kind="subtitles" srcLang="es-AR" label="Español" src={INSTITUTIONAL_VIDEO.captions} default />
         </video>
       )}
     </DialogContent>

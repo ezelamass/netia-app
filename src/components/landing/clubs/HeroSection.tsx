@@ -32,7 +32,7 @@ const HeroSection = ({ onContactClick, onVideoClick }: Props) => (
         {INSTITUTIONAL_VIDEO.src && (
           <button type="button" onClick={onVideoClick} className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-primary hover:underline">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground"><Play className="h-3.5 w-3.5 fill-current" aria-hidden="true" /></span>
-            Ver video (1 min)
+            Ver video (1:20)
           </button>
         )}
       </div>
