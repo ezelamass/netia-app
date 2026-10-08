@@ -19,6 +19,7 @@ import {
   NotFound,
   Demo,
   DemoEntry,
+  DesignSystem,
   Dashboard,
   Profile,
   Calendar,
@@ -101,6 +102,7 @@ const App = () => (
                   <Route path="/register" element={<Register />} />
                   <Route path="/demo" element={<Demo />} />
                   <Route path="/demo/:slug" element={<DemoEntry />} />
+                  <Route path="/sistema-de-diseno" element={<DesignSystem />} />
                   <Route path="/onboarding" element={guard(ALL, <Onboarding />)} />
                   <Route path="/onboarding-result" element={guard(ALL, <OnboardingResult />)} />
 
