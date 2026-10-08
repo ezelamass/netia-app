@@ -27,7 +27,7 @@ const AiSection = () => (
         {avatars.map((a, i) => (
           <li key={a.name}>
             <Reveal delay={i * 0.08} className="h-full">
-              <article className={`flex h-full flex-col items-center rounded-2xl p-6 ${a.bg}`}>
+              <article className={`flex h-full flex-col items-center rounded-2xl p-6 ${a.bg} dark:bg-card`}>
                 <img src={a.img} alt={`${a.name}, ${a.role}`} width={224} height={224} loading="lazy" className="h-48 w-48 object-contain drop-shadow-md sm:h-56 sm:w-56" />
                 <div className="mt-4 w-full text-left">
                   <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${a.chip}`}>{a.role}</span>
