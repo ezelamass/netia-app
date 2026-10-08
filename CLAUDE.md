@@ -79,7 +79,7 @@ src/
 │       └── types.ts  # Auto-generated DB types
 ├── types/            # TypeScript type definitions
 ├── lib/              # Utilities (cn(), recommendation logic)
-├── layouts/          # AppShell (layout route con Outlet), PageTransition
+├── layouts/          # AppShell (layout route con Outlet), PageTransition, AppLayout (wrapper de compatibilidad)
 ├── demo/             # Motor de la demo: dataset determinístico, store, selectors (sin red)
 ├── config/           # contact.ts (canal de contacto), media.ts (video institucional)
 ├── data/             # Static/mock data
@@ -87,7 +87,7 @@ src/
 
 supabase/
 ├── config.toml       # Project config (ID: doeqebxhzctlhizcphkq)
-├── migrations/       # 9 SQL migration files
+├── migrations/       # SQL migrations (ver docs/aplicar-produccion.md para las pendientes)
 └── functions/        # Edge Functions
     ├── avatar-chat/           # AI avatar conversations
     ├── avatar-rag-upload/     # RAG document ingestion
@@ -123,9 +123,9 @@ Supabase DB ↔ Custom Hooks (useX) ↔ React Context (Auth, Onboarding)
 | `parent` | Child monitoring, medical clearance |
 | `coach` | Roster, training load, reports, communication |
 | `club_admin` | Club dashboard + coach features |
-
-`coach` y `club_admin` no se pueden elegir al registrarse (solo `player`/`parent`); se asignan por administración.
 | `admin` | System-wide user management, analytics, settings |
+
+`coach` y `club_admin` no se pueden elegir al registrarse (solo `player`/`parent`, forzado en el trigger `handle_new_user`); se asignan por administración.
 
 ---
 
@@ -177,4 +177,4 @@ npm run preview   # Preview production build
 
 ## Producción pendiente
 
-Migraciones, deploys y limpieza de cuentas demo se aplican según `/mnt/project-files/specs/09-aplicar-produccion.md`. No hacer `db push` sin OK de Ezequiel.
+Migraciones, deploys y limpieza de cuentas demo se aplican según `docs/aplicar-produccion.md`. No hacer `db push` sin OK de Ezequiel.
