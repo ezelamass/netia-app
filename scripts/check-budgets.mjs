@@ -85,7 +85,7 @@ noLib('three / @react-three', 'WebGLRenderer');
 noLib('recharts', 'recharts-wrapper');
 
 // La home pública todavía usa los PNG; lo que no puede pasar es que las 4 pestañas los carguen.
-const tabFiles = new Set(Object.values(fullPages).flatMap((set) => [...set]));
+const tabFiles = new Set(Object.values(fullPages).flatMap((set) => (set ? [...set] : [])));
 const pngInTabs = Object.values(manifest).filter((c) => tabFiles.has(c.file) && (c.assets ?? []).some((a) => /avatar.*\.png$/.test(a)));
 rows.push({ label: 'Avatares PNG en las 4 pestañas', value: String(pngInTabs.length), limit: '0', ok: !pngInTabs.length });
 

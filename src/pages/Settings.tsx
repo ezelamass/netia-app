@@ -50,6 +50,15 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+const downloadFile = (href: string, filename: string) => {
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+};
+
 const Settings = () => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
@@ -362,13 +371,13 @@ const Settings = () => {
             />
             <SettingsRow
               type="link"
-              label="Términos y condiciones"
-              onClick={() => toast.info('Próximamente')}
+              label="Términos y condiciones (PDF)"
+              onClick={() => downloadFile('/TERMINOS_Y_CONDICIONES.pdf', 'Terminos_y_Condiciones_NETIA.pdf')}
             />
             <SettingsRow
               type="link"
-              label="Política de privacidad"
-              onClick={() => toast.info('Próximamente')}
+              label="Política de privacidad (PDF)"
+              onClick={() => downloadFile('/Politica_de_Privacidad_NETIA.pdf', 'Politica_de_Privacidad_NETIA.pdf')}
             />
             <SettingsRow
               type="link"
