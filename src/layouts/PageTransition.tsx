@@ -1,19 +1,6 @@
-import { motion } from 'framer-motion';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
-interface PageTransitionProps {
-  children: ReactNode;
-}
-
-export const PageTransition = ({ children }: PageTransitionProps) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
-    >
-      {children}
-    </motion.div>
-  );
-};
+/** Entrada de página en CSS (fade + 6 px). Sin animación de salida: navegar nunca espera. Usalo con `key={pathname}`. */
+export const PageTransition = ({ children }: { children: ReactNode }) => (
+  <div className="animate-fade-up">{children}</div>
+);

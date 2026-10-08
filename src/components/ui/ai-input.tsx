@@ -1,6 +1,6 @@
 "use client";
 
-import { CornerRightUp, Mic } from "lucide-react";
+import { CornerRightUp, Mic, SendHorizontal } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +19,8 @@ interface AIInputProps {
   onValueChange?: (value: string) => void;
   disabled?: boolean;
   className?: string;
+  /** `chat`: píldora + un solo botón circular (micrófono si está vacío, enviar si hay texto), como WhatsApp. */
+  variant?: "default" | "chat";
 }
 
 export function AIInput({
@@ -31,6 +33,7 @@ export function AIInput({
   onValueChange,
   disabled,
   className,
+  variant = "default",
 }: AIInputProps) {
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
     minHeight,
@@ -133,6 +136,56 @@ export function AIInput({
   };
 
   const isBusy = disabled || isTranscribing;
+
+  if (variant === "chat") {
+    const hasText = !!inputValue.trim();
+    const iconBase = "absolute h-5 w-5 transition-[opacity,transform] duration-fast";
+    return (
+      <div className={cn("w-full", className)}>
+        {(isRecording || isTranscribing) && (
+          <div className="mb-1 flex items-center gap-2 px-3 py-1 text-xs font-medium text-muted-foreground" role="status">
+            <span className={cn("h-2 w-2 shrink-0 rounded-full animate-pulse", isRecording ? "bg-destructive" : "bg-primary")} />
+            {isRecording ? `Grabando ${formatDuration(recordingSeconds)}` : "Transcribiendo audio..."}
+          </div>
+        )}
+        <div className="flex items-end gap-2">
+          <Textarea
+            ref={textareaRef}
+            id={id}
+            placeholder={isTranscribing ? "Transcribiendo..." : placeholder}
+            className={cn(
+              "min-h-0 flex-1 resize-none overflow-hidden rounded-3xl border-0 bg-card px-4 py-3 text-sm text-foreground shadow-bubble",
+              "placeholder:text-muted-foreground",
+              "focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-0",
+              "disabled:cursor-not-allowed disabled:opacity-50",
+            )}
+            value={inputValue}
+            disabled={isBusy}
+            onChange={(e) => { setInputValue(e.target.value); adjustHeight(); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleReset(); }
+            }}
+          />
+          <button
+            type="button"
+            onClick={hasText ? handleReset : toggleRecording}
+            disabled={hasText ? isBusy : disabled}
+            aria-label={hasText ? "Enviar mensaje" : isRecording ? "Detener grabación" : "Grabar mensaje de voz"}
+            className={cn(
+              "relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-primary-foreground shadow-bubble",
+              "transition-[background-color,transform] duration-fast active:scale-[.94]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              "disabled:opacity-50",
+              isRecording && !hasText ? "bg-destructive animate-pulse" : "bg-primary",
+            )}
+          >
+            <Mic className={cn(iconBase, hasText ? "scale-50 -rotate-90 opacity-0" : "scale-100 rotate-0 opacity-100")} aria-hidden="true" />
+            <SendHorizontal className={cn(iconBase, hasText ? "scale-100 rotate-0 opacity-100" : "scale-50 rotate-90 opacity-0")} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("w-full", className)}>

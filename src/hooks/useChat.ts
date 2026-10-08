@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -18,6 +18,10 @@ export interface ChatMessage {
   timestamp: string;
   /** true si llegó en esta sesión (solo esos se animan al entrar) */
   fresh?: boolean;
+  /** true mientras el mensaje del usuario todavía no se guardó */
+  pending?: boolean;
+  /** Tildes (solo mensajes del usuario), derivadas sin backend: reloj → ✓ → ✓✓ cuando responde el agente */
+  status?: 'sending' | 'sent' | 'read';
 }
 
 export interface Handoff {
@@ -55,10 +59,12 @@ async function fetchMessages(convoId: string, avatar: AvatarId): Promise<ChatMes
   }));
 }
 
+const NO_MESSAGES: ChatMessage[] = [];
 const emptyBy = <T,>(v: T): Record<AvatarId, T> => ({ TINO: v, ZAHIA: v, ROMA: v });
 
-/** Estado del chat: conversaciones y mensajes en caché (React Query), envío por agente y "no leídos". */
-export function useChat(agent: AvatarId) {
+/** Estado del chat: conversaciones y mensajes en caché (React Query), envío por agente y "no leídos".
+ *  `viewing` = false cuando se está en la lista de chats (ninguna conversación abierta). */
+export function useChat(agent: AvatarId, viewing = true) {
   const { user } = useAuth();
   const userId = user?.id;
   const { toast } = useToast();
@@ -66,10 +72,12 @@ export function useChat(agent: AvatarId) {
 
   const agentRef = useRef(agent);
   agentRef.current = agent;
+  const viewingRef = useRef<AvatarId | null>(viewing ? agent : null);
+  viewingRef.current = viewing ? agent : null;
 
   const [chosen, setChosen] = useState<Partial<Record<AvatarId, string | null>>>({});
   const [sending, setSending] = useState<Record<AvatarId, boolean>>(emptyBy(false));
-  const [unread, setUnread] = useState<Record<AvatarId, boolean>>(emptyBy(false));
+  const [unread, setUnread] = useState<Record<AvatarId, number>>(emptyBy(0));
   const [handoffs, setHandoffs] = useState<Record<AvatarId, Handoff | null>>(emptyBy(null));
 
   const convosQuery = useQuery({
@@ -89,23 +97,45 @@ export function useChat(agent: AvatarId) {
     enabled: !!activeConvoId,
     staleTime: STALE,
   });
-  const messages = activeConvoId ? (messagesQuery.data ?? []) : [];
+  const rawMessages = (activeConvoId ? messagesQuery.data : undefined) ?? NO_MESSAGES;
 
-  // Prefetch de la última conversación de cada agente: el cambio de agente es instantáneo.
-  useEffect(() => {
-    if (!convosQuery.data) return;
-    for (const id of AVATAR_IDS) {
-      const latest = convosQuery.data.find((c) => c.avatar === id);
-      if (latest) {
-        qc.prefetchQuery({ queryKey: msgsKey(latest.id), queryFn: () => fetchMessages(latest.id, id), staleTime: STALE });
-      }
+  // Tildes derivadas: reloj mientras se guarda, ✓ guardado, ✓✓ si hay una respuesta posterior del agente.
+  const messages = useMemo<ChatMessage[]>(() => {
+    let replied = false;
+    const out = new Array<ChatMessage>(rawMessages.length);
+    for (let i = rawMessages.length - 1; i >= 0; i--) {
+      const m = rawMessages[i];
+      if (m.sender === 'avatar') { replied = true; out[i] = m; continue; }
+      out[i] = { ...m, status: replied ? 'read' : m.pending ? 'sending' : 'sent' };
     }
-  }, [convosQuery.data, qc]);
+    return out;
+  }, [rawMessages]);
 
-  // Al entrar a un agente, sus mensajes quedan leídos.
+  // Última conversación de cada agente, siempre en caché: el cambio de agente es instantáneo y la lista de chats muestra el último mensaje.
+  const latestIds = AVATAR_IDS.map((id) => conversations.find((c) => c.avatar === id)?.id ?? null);
+  const latestQueries = useQueries({
+    queries: AVATAR_IDS.map((id, i) => ({
+      queryKey: msgsKey(latestIds[i]),
+      queryFn: () => fetchMessages(latestIds[i]!, id),
+      enabled: !!latestIds[i],
+      staleTime: STALE,
+    })),
+  });
+  const lastMessages = useMemo(() => {
+    const out = emptyBy<ChatMessage | null>(null);
+    AVATAR_IDS.forEach((id, i) => {
+      const list = latestQueries[i].data;
+      out[id] = list && list.length ? list[list.length - 1] : null;
+    });
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, latestQueries.map((q) => q.data));
+
+  // Al abrir la conversación de un agente, sus mensajes quedan leídos.
   useEffect(() => {
-    setUnread((u) => (u[agent] ? { ...u, [agent]: false } : u));
-  }, [agent]);
+    if (!viewing) return;
+    setUnread((u) => (u[agent] ? { ...u, [agent]: 0 } : u));
+  }, [agent, viewing]);
 
   const setMessages = useCallback((convoId: string, fn: (prev: ChatMessage[]) => ChatMessage[]) => {
     qc.setQueryData<ChatMessage[]>(msgsKey(convoId), (prev) => fn(prev ?? []));
@@ -166,7 +196,8 @@ export function useChat(agent: AvatarId) {
 
     const id = convoId;
     const isFirst = !(qc.getQueryData<ChatMessage[]>(msgsKey(id)) ?? []).some((m) => m.sender === 'user');
-    setMessages(id, (prev) => [...prev, { id: newId(), sender: 'user', avatar: target, text, timestamp: new Date().toISOString(), fresh: true }]);
+    const userMsgId = newId();
+    setMessages(id, (prev) => [...prev, { id: userMsgId, sender: 'user', avatar: target, text, timestamp: new Date().toISOString(), fresh: true, pending: true }]);
 
     const to = suggestAgentFor(text, target);
     setHandoffs((h) => ({ ...h, [target]: to ? { to, text } : null }));
@@ -178,7 +209,8 @@ export function useChat(agent: AvatarId) {
     }
 
     setSending((s) => ({ ...s, [target]: true }));
-    void saveMessage(id, 'user', text);
+    void saveMessage(id, 'user', text).then(() =>
+      setMessages(id, (prev) => prev.map((m) => (m.id === userMsgId ? { ...m, pending: false } : m))));
 
     let clearLater = false;
     try {
@@ -195,7 +227,7 @@ export function useChat(agent: AvatarId) {
         window.setTimeout(() => {
           setMessages(id, (prev) => [...prev, { id: newId(), sender: 'avatar', avatar: target, text: part, timestamp: new Date().toISOString(), fresh: true }]);
           void saveMessage(id, 'assistant', part);
-          if (agentRef.current !== target) setUnread((u) => ({ ...u, [target]: true }));
+          if (viewingRef.current !== target) setUnread((u) => ({ ...u, [target]: u[target] + 1 }));
           if (i === parts.length - 1) setSending((st) => ({ ...st, [target]: false }));
         }, i * PART_DELAY_MS);
       });
@@ -239,6 +271,7 @@ export function useChat(agent: AvatarId) {
     activeConvoId,
     isSending: sending[agent],
     unread,
+    lastMessages,
     handoff: handoffs[agent],
     clearHandoff,
     sendMessage,

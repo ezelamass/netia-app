@@ -1,9 +1,17 @@
-import { History, SquarePen } from 'lucide-react';
+import { ArrowLeft, History, MoreVertical, SquarePen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AGENTS, type AvatarId } from '@/lib/avatars';
+import { AgentAvatar } from '@/components/play/AgentAvatar';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface ChatHeaderProps {
   avatar: AvatarId;
+  /** Mientras el agente responde: "escribiendo…" + anillo IA en el avatar */
+  typing?: boolean;
+  /** Flecha "atrás" a la lista (solo mobile) */
+  onBack: () => void;
   onNewChat: () => void;
   onOpenHistory: () => void;
   disabled?: boolean;
@@ -12,27 +20,51 @@ interface ChatHeaderProps {
   maxCount: number;
 }
 
-const TINT: Record<AvatarId, string> = {
-  TINO: 'bg-tino-soft/70',
-  ZAHIA: 'bg-zahia-soft/70',
-  ROMA: 'bg-roma-soft/70',
+const STATUS_COLOR: Record<AvatarId, string> = {
+  TINO: 'text-tino-text',
+  ZAHIA: 'text-zahia-text',
+  ROMA: 'text-roma-text',
 };
 
-const btn =
-  'flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium text-muted-foreground transition-colors duration-150 hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50';
-
-/** Barra del agente: tagline + historial (n/5) + nuevo chat. */
-export const ChatHeader = ({ avatar, onNewChat, onOpenHistory, disabled, atLimit, totalCount, maxCount }: ChatHeaderProps) => (
-  <div className={cn('flex h-10 items-center justify-between gap-2 border-b border-border/60 px-3', TINT[avatar])}>
-    <p className="truncate text-xs text-muted-foreground">{AGENTS[avatar].tagline}</p>
-    <div className="flex items-center gap-1">
-      <button type="button" onClick={onOpenHistory} className={btn} aria-label={`Historial de chats, ${totalCount} de ${maxCount}`}>
-        <History className="h-4 w-4" aria-hidden="true" />
-        <span className={cn('tabular-nums', atLimit && 'font-semibold text-destructive')}>{totalCount}/{maxCount}</span>
-      </button>
-      <button type="button" onClick={onNewChat} disabled={disabled} className={btn} aria-label="Nuevo chat">
-        <SquarePen className="h-4 w-4" aria-hidden="true" />
-      </button>
+/** Cabecera de la conversación: [←] avatar, nombre / estado, menú ⋮. */
+export const ChatHeader = ({ avatar, typing, onBack, onNewChat, onOpenHistory, disabled, atLimit, totalCount, maxCount }: ChatHeaderProps) => (
+  <div className="flex h-16 items-center gap-2 border-b border-border/60 bg-card px-2 lg:px-4">
+    <button
+      type="button"
+      onClick={onBack}
+      aria-label="Volver a los chats"
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-[color,background-color,transform] duration-fast hover:bg-muted hover:text-foreground active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+    >
+      <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+    </button>
+    <AgentAvatar agent={avatar} size={40} state={typing ? 'thinking' : 'idle'} className="ml-1 lg:ml-0" />
+    <div className="min-w-0 flex-1 leading-tight">
+      <h1 className="truncate font-sans text-base font-semibold">{AGENTS[avatar].name}</h1>
+      <p className={cn('truncate text-xs', typing ? cn('font-medium', STATUS_COLOR[avatar]) : 'text-muted-foreground')} aria-live="polite">
+        {typing ? 'escribiendo…' : AGENTS[avatar].area}
+      </p>
     </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Más opciones del chat"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-[color,background-color,transform] duration-fast hover:bg-muted hover:text-foreground active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <MoreVertical className="h-5 w-5" aria-hidden="true" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem onSelect={onOpenHistory}>
+          <History className="mr-2 h-4 w-4" aria-hidden="true" />
+          <span>Chats anteriores</span>
+          <span className={cn('ml-auto tabular-nums text-xs text-muted-foreground', atLimit && 'font-semibold text-destructive')}>{totalCount}/{maxCount}</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onNewChat} disabled={disabled}>
+          <SquarePen className="mr-2 h-4 w-4" aria-hidden="true" />
+          Nuevo chat
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   </div>
 );

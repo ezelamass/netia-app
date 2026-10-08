@@ -1,9 +1,10 @@
 import { Suspense, createContext, lazy, useContext, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Header } from '@/components/dashboard/Header';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { MobileNav } from '@/components/navigation/MobileNav';
-import { prefetchMainTabs } from '@/components/navigation/navConfig';
+import { isChatConversation, prefetchMainTabs } from '@/components/navigation/navConfig';
+import { PageTransition } from '@/layouts/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
 import '@/styles/play-skin.css';
 import { CommandPaletteProvider } from '@/components/navigation/CommandPalette';
@@ -22,10 +23,18 @@ const ShellContext = createContext(false);
 /** true cuando ya estamos dentro del AppShell (evita montar un shell anidado). */
 export const useInsideShell = () => useContext(ShellContext);
 
+/** Microcopy de carga por contexto (una por pantalla, nunca al azar). */
+const LOADING_COPY: Record<string, string> = {
+  '/training': 'Preparando tu sesión…',
+  '/calendar': 'Ordenando tu semana…',
+};
+
 export const AppShell = () => {
   const { isDemoMode, presentation } = useDemo();
   const { user } = useAuth();
   const playSkin = user?.role === 'player' || user?.role === 'parent';
+  const { pathname, search } = useLocation();
+  const immersive = isChatConversation(pathname, search);
 
   // Precarga las pestañas principales del rol cuando el navegador está ocioso.
   useEffect(() => { prefetchMainTabs(user?.role); }, [user?.role]);
@@ -74,9 +83,11 @@ export const AppShell = () => {
             <Sidebar />
             <div className="flex-1 flex flex-col min-w-0">
               <Header />
-              <main className="flex-1 pb-24 lg:pb-8 px-4 lg:px-6 pt-5 min-w-0">
-                <Suspense fallback={<PageSkeleton />}>
-                  <Outlet />
+              <main className={cn('flex-1 lg:pb-8 px-4 lg:px-6 pt-5 min-w-0', immersive ? 'pb-4' : 'pb-24')}>
+                <Suspense fallback={<PageSkeleton message={LOADING_COPY[pathname]} />}>
+                  <PageTransition key={pathname}>
+                    <Outlet />
+                  </PageTransition>
                 </Suspense>
               </main>
             </div>

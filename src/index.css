@@ -29,6 +29,10 @@ All colors MUST be HSL.
     --avatar-tino: 211 100% 35%; /* #0056B3 - TINO azul oscuro */
     --avatar-zahia: 162 100% 39%; /* #00C896 - ZAHIA verde */
     --avatar-roma: 257 89% 62%; /* #7A5AF5 - ROMA púrpura */
+    /* Variantes para TEXTO sobre fondo claro (contraste AA) */
+    --avatar-tino-text: 211 100% 35%;
+    --avatar-zahia-text: 162 100% 24%;
+    --avatar-roma-text: 257 65% 52%;
 
     /* Primary mapped to NETIA Blue */
     --primary: 211 100% 50%; /* #007BFF */
@@ -175,6 +179,9 @@ All colors MUST be HSL.
     --avatar-tino: 211 100% 41%;
     --avatar-zahia: 162 100% 45%;
     --avatar-roma: 257 89% 68%;
+    --avatar-tino-text: 211 100% 68%;
+    --avatar-zahia-text: 162 100% 45%;
+    --avatar-roma-text: 257 89% 76%;
     --ai-shimmer: 220 10% 20%;
     --ai-shimmer-hi: 220 10% 28%;
 
@@ -291,4 +298,42 @@ All colors MUST be HSL.
     scroll-behavior: auto !important;
   }
   .motion-fade-only { transition: opacity 120ms linear !important; }
+}
+
+@layer components {
+  /* Papel tapiz del chat: íconos deportivos de línea (máscara) sobre --chat-bg; sube/baja con el tema. */
+  .chat-wallpaper {
+    position: relative;
+    isolation: isolate;
+    background-color: hsl(var(--chat-bg));
+  }
+  .chat-wallpaper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: hsl(var(--foreground));
+    opacity: var(--chat-pattern-opacity);
+    -webkit-mask: url('/chat-wallpaper.svg') 0 0 / 160px 160px repeat;
+    mask: url('/chat-wallpaper.svg') 0 0 / 160px 160px repeat;
+  }
+
+  /* Cola de la burbuja (solo la primera de un grupo). Hereda el fondo de la burbuja. */
+  .bubble-tail::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 8px;
+    height: 12px;
+    background: inherit;
+  }
+  .bubble-tail-in::after {
+    left: -7px;
+    clip-path: polygon(100% 0, 0 0, 100% 100%);
+  }
+  .bubble-tail-out::after {
+    right: -7px;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
 }
