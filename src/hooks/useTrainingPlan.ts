@@ -145,7 +145,6 @@ async function fetchPlan(userId: string): Promise<TrainingPlan | null> {
     let status: DaySession['status'] = 'upcoming';
     if (s.status === 'completed') status = 'completed';
     else if (s.day_index === todayIndex) status = 'today';
-    else if (s.day_index < todayIndex) status = 'completed';
     if (s.session_type === 'rest') status = 'rest';
     return {
       id: s.id,
