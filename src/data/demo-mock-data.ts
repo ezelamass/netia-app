@@ -347,7 +347,7 @@ export function buildInitialMockData(): MockDataset {
     ],
 
     ai_conversations: [
-      { id: 'conv-roma-1', user_id: PLAYER_ID, avatar: 'ROMA', title: 'Técnica de saque', last_message_at: isoAt(0, 10, 0), created_at: isoAt(-1) },
+      { id: 'conv-roma-1', user_id: PLAYER_ID, avatar: 'ROMA', title: 'Nervios antes del torneo', last_message_at: isoAt(0, 10, 0), created_at: isoAt(-1) },
       { id: 'conv-tino-1', user_id: PLAYER_ID, avatar: 'TINO', title: 'Entrenamiento de la semana', last_message_at: isoAt(-2), created_at: isoAt(-2) },
       { id: 'conv-zahia-1', user_id: PLAYER_ID, avatar: 'ZAHIA', title: 'Hidratación pre-partido', last_message_at: isoAt(-5), created_at: isoAt(-5) },
     ],
@@ -362,11 +362,19 @@ export function buildInitialMockData(): MockDataset {
 
       // Tino conversation
       { id: 'msg-6', conversation_id: 'conv-tino-1', role: 'user', content: 'Tino, qué te parece sumar trabajo de fuerza esta semana?', created_at: isoAt(-2, 17, 30) },
-      { id: 'msg-7', conversation_id: 'conv-tino-1', role: 'assistant', content: 'Excelente idea, campeón. A tu edad la fuerza con peso corporal es lo mejor: sentadillas, planchas y estocadas. 3 series de 10 reps, dos veces por semana, alcanza para empezar a ver cambios en tu juego.', created_at: isoAt(-2, 17, 31) },
+      { id: 'msg-7', conversation_id: 'conv-tino-1', role: 'assistant', content: 'Excelente idea, campeón. A tu edad la fuerza con peso corporal es lo mejor: sentadillas, planchas y estocadas.', created_at: isoAt(-2, 17, 31) },
+      { id: 'msg-7b', conversation_id: 'conv-tino-1', role: 'assistant', content: '3 series de 10 reps, dos veces por semana, alcanza para empezar a ver cambios en tu juego. Hacelo después del calentamiento, nunca en frío.', created_at: isoAt(-2, 17, 32) },
+      { id: 'msg-7c', conversation_id: 'conv-tino-1', role: 'user', content: 'Y los días de partido, entreno fuerza o descanso?', created_at: isoAt(-2, 17, 40) },
+      { id: 'msg-7d', conversation_id: 'conv-tino-1', role: 'assistant', content: 'El día del partido, nada de fuerza: solo un calentamiento de 10 minutos con movilidad y algunos desplazamientos cortos.', created_at: isoAt(-2, 17, 41) },
+      { id: 'msg-7e', conversation_id: 'conv-tino-1', role: 'assistant', content: 'La fuerza la dejamos para los días de entrenamiento, así llegás con las piernas livianas al torneo del sábado.', created_at: isoAt(-2, 17, 42) },
 
       // Zahia conversation
       { id: 'msg-8', conversation_id: 'conv-zahia-1', role: 'user', content: 'Zahia, qué tomo antes de un partido?', created_at: isoAt(-5, 11, 0) },
-      { id: 'msg-9', conversation_id: 'conv-zahia-1', role: 'assistant', content: 'Para un partido de tenis, necesitás hidratarte BIEN desde la noche anterior. Tomá 500ml de agua al despertar, otro vaso 1 hora antes y llevá una botella con sales (puede ser una bebida deportiva diluida) para sorbos cada cambio de lado.', created_at: isoAt(-5, 11, 2) },
+      { id: 'msg-9', conversation_id: 'conv-zahia-1', role: 'assistant', content: 'Para un partido de tenis, necesitás hidratarte BIEN desde la noche anterior. Tomá 500 ml de agua al despertar y otro vaso 1 hora antes.', created_at: isoAt(-5, 11, 2) },
+      { id: 'msg-9b', conversation_id: 'conv-zahia-1', role: 'assistant', content: 'Llevá una botella con sales (puede ser una bebida deportiva diluida) para tomar sorbos en cada cambio de lado.', created_at: isoAt(-5, 11, 3) },
+      { id: 'msg-9c', conversation_id: 'conv-zahia-1', role: 'user', content: 'Y para comer? Qué como antes de jugar?', created_at: isoAt(-5, 11, 10) },
+      { id: 'msg-9d', conversation_id: 'conv-zahia-1', role: 'assistant', content: 'Comé 2 o 3 horas antes: arroz o pasta con pollo y algo de verdura. Evitá frituras y lácteos pesados.', created_at: isoAt(-5, 11, 11) },
+      { id: 'msg-9e', conversation_id: 'conv-zahia-1', role: 'assistant', content: 'Y 1 hora antes, una banana o un yogur con avena te da energía sin pesadez.', created_at: isoAt(-5, 11, 12) },
     ],
 
     // ──────────────────────────────────────
@@ -517,6 +525,32 @@ export function mockAvatarReply(avatar: Avatar, message: string): string {
     if (keywords.test(message)) return response;
   }
   return list[list.length - 1].response;
+}
+
+const OPENERS: Record<Avatar, string[]> = {
+  TINO: ['¡Dale, vamos con eso!', 'Buena pregunta, campeón.', '¡Me gusta que lo preguntes!'],
+  ZAHIA: ['¡Qué buena pregunta!', 'Mirá, te lo explico fácil.', 'Perfecto que lo consultes.'],
+  ROMA: ['Gracias por contármelo.', 'Entiendo lo que decís.', 'Eso le pasa a mucha gente que compite.'],
+};
+
+const CLOSERS: Record<Avatar, string> = {
+  TINO: '¿Querés que lo armemos como parte de tu plan de la semana?',
+  ZAHIA: '¿Te armo una idea concreta para hoy?',
+  ROMA: '¿Lo probamos juntos en tu próximo entrenamiento?',
+};
+
+/** Respuesta en 2–3 partes (como el edge function real), con voseo y sobre el tema consultado. */
+export function mockAvatarReplyParts(avatar: Avatar, message: string): string[] {
+  const body = mockAvatarReply(avatar, message);
+  const sentences = body.match(/[^.!?]+[.!?]+(\s|$)/g)?.map((x) => x.trim()) ?? [body];
+  const generic = body === (RESPONSES[avatar] ?? RESPONSES.TINO).slice(-1)[0].response;
+  const opener = generic ? '' : OPENERS[avatar][message.length % OPENERS[avatar].length];
+  const mid = Math.max(1, Math.ceil(sentences.length / 2));
+  const parts = [`${opener} ${sentences.slice(0, mid).join(' ')}`.trim()];
+  const rest = sentences.slice(mid).join(' ').trim();
+  if (rest) parts.push(rest);
+  parts.push(CLOSERS[avatar]);
+  return parts;
 }
 
 export { newId };
