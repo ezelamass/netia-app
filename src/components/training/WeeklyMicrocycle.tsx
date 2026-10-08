@@ -1,11 +1,11 @@
-import { DaySession } from '@/hooks/useTrainingPlan';
-import { SESSION_TYPE_COLORS, SESSION_TYPE_LABELS, SessionType } from '@/types/training';
+import { memo } from 'react';
+import { Check, Dumbbell, Moon, Swords, Target, Zap, Heart, type LucideIcon } from 'lucide-react';
+import type { DaySession } from '@/hooks/useTrainingPlan';
+import { SESSION_TYPE_LABELS, type SessionType } from '@/types/training';
 import { cn } from '@/lib/utils';
-import { Check, Moon, Zap, Crosshair, Dumbbell, Swords, Heart } from 'lucide-react';
-import { motion } from 'framer-motion';
 
-const typeIcons: Record<SessionType | 'rest', React.ElementType> = {
-  technical: Crosshair,
+const TYPE_ICON: Record<SessionType | 'rest', LucideIcon> = {
+  technical: Target,
   physical: Dumbbell,
   tactical: Zap,
   match: Swords,
@@ -13,92 +13,47 @@ const typeIcons: Record<SessionType | 'rest', React.ElementType> = {
   rest: Moon,
 };
 
-interface WeeklyMicrocycleProps {
+interface Props {
   sessions: DaySession[];
-  onSelectDay: (dayIndex: number) => void;
   selectedDay: number | null;
+  onSelectDay: (dayIndex: number) => void;
 }
 
-export function WeeklyMicrocycle({ sessions, onSelectDay, selectedDay }: WeeklyMicrocycleProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.25 }}
-      className="w-full"
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <h3 className="text-sm font-semibold text-foreground">Microciclo semanal</h3>
-      </div>
-
-      <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-        {sessions.map((session) => {
-          const Icon = typeIcons[session.type];
-          const isSelected = selectedDay === session.dayIndex;
-          const isToday = session.status === 'today';
-          const isCompleted = session.status === 'completed';
-          const isRest = session.type === 'rest';
-
-          return (
-            <button
-              key={session.dayIndex}
-              onClick={() => onSelectDay(session.dayIndex)}
-              className={cn(
-                'relative flex flex-col items-center gap-1 p-2 sm:p-3 rounded-xl transition-all',
-                'border hover:shadow-md cursor-pointer',
-                isSelected
-                  ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20'
-                  : 'border-border bg-card hover:border-primary/40',
-                isToday && !isSelected && 'border-primary/50 bg-primary/5'
-              )}
-            >
-              <span className={cn(
-                'text-[10px] sm:text-xs font-bold uppercase',
-                isToday ? 'text-primary' : 'text-muted-foreground'
-              )}>
-                {session.dayLabel}
-              </span>
-
-              <div className={cn(
-                'w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center',
-                isRest
-                  ? 'bg-muted'
-                  : isCompleted
-                    ? 'bg-[hsl(var(--success))]/15'
-                    : isToday
-                      ? 'bg-primary/15'
-                      : 'bg-muted'
-              )}>
-                {isCompleted && !isRest ? (
-                  <Check className="w-4 h-4 sm:w-5 sm:h-5 text-[hsl(var(--success))]" />
-                ) : (
-                  <Icon className={cn(
-                    'w-4 h-4 sm:w-5 sm:h-5',
-                    isRest ? 'text-muted-foreground' : isToday ? 'text-primary' : 'text-muted-foreground'
-                  )} />
-                )}
-              </div>
-
-              <span className="text-[9px] sm:text-[10px] text-muted-foreground font-medium text-center leading-tight line-clamp-1">
-                {isRest ? 'Descanso' : SESSION_TYPE_LABELS[session.type as SessionType]}
-              </span>
-
-              {session.duration > 0 && !isRest && (
-                <span className="text-[9px] text-muted-foreground">{session.duration}′</span>
-              )}
-
-              {/* Today indicator dot */}
-              {isToday && (
-                <motion.div
-                  animate={{ scale: [1, 1.3, 1] }}
-                  transition={{ repeat: Infinity, duration: 2 }}
-                  className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-primary"
-                />
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </motion.div>
-  );
-}
+export const WeeklyMicrocycle = memo(({ sessions, selectedDay, onSelectDay }: Props) => (
+  <div className="grid grid-cols-7 gap-1">
+    {sessions.map((s) => {
+      const rest = s.type === 'rest';
+      const done = s.status === 'completed' && !rest;
+      const today = s.status === 'today';
+      const sel = selectedDay === s.dayIndex;
+      const Icon = done ? Check : TYPE_ICON[s.type];
+      const label = rest ? 'Descanso' : SESSION_TYPE_LABELS[s.type as SessionType];
+      return (
+        <button
+          key={s.dayIndex}
+          type="button"
+          onClick={() => onSelectDay(s.dayIndex)}
+          aria-pressed={sel}
+          aria-label={`${s.dayLabel}: ${label}${done ? ', hecho' : today ? ', hoy' : ''}`}
+          className={cn(
+            'flex flex-col items-center gap-1 rounded-xl border px-0.5 py-2 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            sel ? 'border-primary bg-primary text-primary-foreground' : 'border-transparent hover:bg-muted',
+            !sel && today && 'border-primary/40 bg-primary-soft text-primary',
+          )}
+        >
+          <span className="text-[11px] font-medium uppercase">{s.dayLabel}</span>
+          <span
+            className={cn(
+              'flex h-7 w-7 items-center justify-center rounded-full',
+              sel ? 'bg-primary-foreground/20' : done ? 'bg-success-soft text-success' : rest ? 'bg-slate-soft text-muted-foreground' : 'bg-primary-soft text-primary',
+            )}
+          >
+            <Icon className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <span className="max-w-full truncate text-[10px] font-medium">{label}</span>
+        </button>
+      );
+    })}
+  </div>
+));
+WeeklyMicrocycle.displayName = 'WeeklyMicrocycle';

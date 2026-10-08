@@ -22,6 +22,7 @@ import {
   Profile,
   Calendar,
   Training,
+  TrainingSession,
   DiagnosticTest,
   Chat,
   Leaderboard,
@@ -108,6 +109,7 @@ const App = () => (
                     <Route path="/profile" element={guard(ALL, <Profile />)} />
                     <Route path="/calendar" element={guard(PLAYER, <Calendar />)} />
                     <Route path="/training" element={guard(PLAYER, <Training />)} />
+                    <Route path="/training/sesion" element={guard(PLAYER, <TrainingSession />)} />
                     <Route path="/chat" element={guard(PLAYER, <Chat />)} />
                     <Route path="/settings" element={guard(ALL, <Settings />)} />
                     <Route path="/leaderboard" element={guard(PLAYER, <Leaderboard />)} />

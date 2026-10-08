@@ -1,6 +1,6 @@
 export { StageProgressBar } from './StageProgressBar';
-export { CycleGoalCard } from './CycleGoalCard';
 export { WeeklyMicrocycle } from './WeeklyMicrocycle';
-export { SessionDetail } from './SessionDetail';
-export { ComplianceCard } from './ComplianceCard';
 export { LoadRecoveryCard } from './LoadRecoveryCard';
+export { ChallengeCard } from './ChallengeCard';
+export { DrillCarousel } from './DrillCarousel';
+export { CoachNoteCard } from './CoachNoteCard';
