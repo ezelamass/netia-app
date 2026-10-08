@@ -1,4 +1,4 @@
-import { LogOut, User, Settings, ChevronDown } from 'lucide-react';
+import { LogOut, User, Settings, ChevronDown, Moon, Sun, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -13,71 +13,67 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { NotificationBell } from '@/components/notifications';
+import { roleLabels } from '@/components/navigation/navConfig';
+import { useCommandPalette } from '@/components/navigation/CommandPalette';
+import { useTheme } from '@/hooks/useTheme';
 
 export const Header = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { setOpen: openPalette } = useCommandPalette();
+  const { isDark, toggle } = useTheme();
 
   const handleLogout = () => {
     logout();
-    toast.success('Sesión cerrada correctamente');
+    toast.success('Sesión cerrada');
     navigate('/login');
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  const initials = (name: string) =>
+    name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 
   return (
-    <header className="h-16 bg-background/80 backdrop-blur-lg border-b border-border sticky top-0 z-30 px-4 lg:px-8">
-      <div className="h-full flex items-center justify-between">
-        {/* Left: Welcome message (desktop only) */}
-        <div className="hidden lg:block">
-          <h2 className="text-lg font-semibold">¡Hola, {user?.name}!</h2>
-          <p className="text-sm text-muted-foreground">Listo para entrenar hoy</p>
-        </div>
-
-        {/* Mobile: Logo */}
+    <header className="no-print h-14 bg-card/90 backdrop-blur border-b border-border sticky top-0 z-30 px-4 lg:px-6">
+      <div className="h-full flex items-center justify-between gap-3">
         <div className="lg:hidden flex items-center gap-2">
-          <img src="/logo.png" alt="NETIA" className="w-8 h-8 rounded-lg" />
+          <img src="/logo.png" alt="NETIA" className="w-7 h-7 rounded-md" />
           <span className="font-bold font-heading">NETIA</span>
         </div>
 
-        {/* Right: Notifications + Profile */}
-        <div className="flex items-center gap-3">
-          {/* Notifications */}
+        <div className="hidden lg:block text-sm text-muted-foreground">
+          {user?.name ? <>Hola, <span className="font-medium text-foreground">{user.name}</span></> : null}
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <Button variant="ghost" size="icon" onClick={() => openPalette(true)} aria-label="Buscar (Ctrl K)" className="lg:hidden">
+            <Search className="w-5 h-5" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={toggle} aria-label={isDark ? 'Modo claro' : 'Modo oscuro'}>
+            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </Button>
           <NotificationBell />
 
-          {/* Profile Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2 px-2">
+              <Button variant="ghost" className="flex items-center gap-2 px-2" aria-label="Menú de usuario">
                 <Avatar className="w-8 h-8">
-                  <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-sm font-semibold">
-                    {user?.name ? getInitials(user.name) : 'U'}
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
+                    {user?.name ? initials(user.name) : 'U'}
                   </AvatarFallback>
                 </Avatar>
-                <span className="hidden lg:block text-sm font-medium">{user?.name}</span>
                 <ChevronDown className="hidden lg:block w-4 h-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
-                <div>
-                  <p className="font-semibold">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  <p className="text-xs text-primary font-medium mt-1 capitalize">{user?.role}</p>
-                </div>
+                <p className="font-semibold">{user?.name}</p>
+                <p className="text-xs text-muted-foreground font-normal">{user?.email}</p>
+                <p className="text-xs text-primary font-medium mt-1">{user?.role ? roleLabels[user.role] : ''}</p>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate('/profile')}>
                 <User className="w-4 h-4 mr-2" />
-                Mi Perfil
+                Mi perfil
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate('/settings')}>
                 <Settings className="w-4 h-4 mr-2" />
@@ -86,7 +82,7 @@ export const Header = () => {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                 <LogOut className="w-4 h-4 mr-2" />
-                Cerrar Sesión
+                Cerrar sesión
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

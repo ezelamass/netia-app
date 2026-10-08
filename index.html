@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/logo.png" type="image/png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <!--
       `google` no-translate hint: stops Chrome / Edge from auto-translating
       the page when a user's browser thinks it should "translate to Spanish".
@@ -11,15 +11,27 @@
       from being mistranslated to "Aviones" in some user browsers.
     -->
     <meta name="google" content="notranslate" />
-    <title>NETIA - Plataforma Educativa Deportiva</title>
-    <meta name="description" content="NETIA: Plataforma educativa deportiva con IA para jóvenes atletas" />
+    <script>
+      // Dark mode al boot (evita parpadeo): lee netia_settings y cae a prefers-color-scheme
+      (function () {
+        try {
+          var t = 'system';
+          var raw = localStorage.getItem('netia_settings');
+          if (raw) { var a = JSON.parse(raw).appearance; if (a && a.theme) t = a.theme; }
+          var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
+    <title>NETIA - Gestión de clubes deportivos</title>
+    <meta name="description" content="NETIA: gestioná socios, cuotas, aptos médicos y comunicación de tu club en un solo lugar" />
     <meta name="author" content="NETIA" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <meta property="og:title" content="NETIA - Plataforma Educativa Deportiva" />
-    <meta property="og:description" content="NETIA: Plataforma educativa deportiva con IA para jóvenes atletas" />
+    <meta property="og:title" content="NETIA - Gestión de clubes deportivos" />
+    <meta property="og:description" content="NETIA: gestioná socios, cuotas, aptos médicos y comunicación de tu club en un solo lugar" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/logo.png" />
 

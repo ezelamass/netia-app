@@ -1,3 +1,4 @@
+import { Suspense, lazy, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,53 +6,66 @@ import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import type { UserRole } from "@/contexts/AuthContext";
 import { DemoProvider } from "@/contexts/DemoContext";
 import { RouteGuard } from "@/components/RouteGuard";
+import { AppShell } from "@/layouts/AppShell";
+import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
 
 // Public pages
-import LandingPage from "./pages/LandingPage";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import NotFound from "./pages/NotFound";
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Student pages
-import Dashboard from "./pages/Dashboard";
-import Profile from "./pages/Profile";
-import Calendar from "./pages/Calendar";
-import Training from "./pages/Training";
-import DiagnosticTest from "./pages/DiagnosticTest";
-import Chat from "./pages/Chat";
-import Leaderboard from "./pages/Leaderboard";
-import Achievements from "./pages/Achievements";
-import Onboarding from "./pages/Onboarding";
-import Settings from "./pages/Settings";
-import OnboardingResult from "./pages/OnboardingResult";
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Calendar = lazy(() => import("./pages/Calendar"));
+const Training = lazy(() => import("./pages/Training"));
+const DiagnosticTest = lazy(() => import("./pages/DiagnosticTest"));
+const Chat = lazy(() => import("./pages/Chat"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+const Achievements = lazy(() => import("./pages/Achievements"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+const Settings = lazy(() => import("./pages/Settings"));
+const OnboardingResult = lazy(() => import("./pages/OnboardingResult"));
 
 // Parent pages
-import ParentDashboard from "./pages/parent/ParentDashboard";
-import ParentChild from "./pages/parent/ParentChild";
-import ParentMedical from "./pages/parent/ParentMedical";
+const ParentDashboard = lazy(() => import("./pages/parent/ParentDashboard"));
+const ParentChild = lazy(() => import("./pages/parent/ParentChild"));
+const ParentMedical = lazy(() => import("./pages/parent/ParentMedical"));
 
 // Club pages
-import ClubDashboard from "./pages/club/ClubDashboard";
-import Roster from "./pages/club/Roster";
-import TrainingLoad from "./pages/club/TrainingLoad";
-import Reports from "./pages/club/Reports";
-import Communication from "./pages/club/Communication";
+const ClubDashboard = lazy(() => import("./pages/club/ClubDashboard"));
+const Roster = lazy(() => import("./pages/club/Roster"));
+const TrainingLoad = lazy(() => import("./pages/club/TrainingLoad"));
+const Reports = lazy(() => import("./pages/club/Reports"));
+const Communication = lazy(() => import("./pages/club/Communication"));
 
 // Classroom pages
-import Classroom from "./pages/Classroom";
-import ClassroomModule from "./pages/ClassroomModule";
-import ClassroomLesson from "./pages/ClassroomLesson";
+const Classroom = lazy(() => import("./pages/Classroom"));
+const ClassroomModule = lazy(() => import("./pages/ClassroomModule"));
+const ClassroomLesson = lazy(() => import("./pages/ClassroomLesson"));
 
 // Admin pages
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import Users from "./pages/admin/Users";
-import Analytics from "./pages/admin/Analytics";
-import AdminSettings from "./pages/admin/Settings";
-import AdminCourses from "./pages/admin/Courses";
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const Users = lazy(() => import("./pages/admin/Users"));
+const Analytics = lazy(() => import("./pages/admin/Analytics"));
+const AdminSettings = lazy(() => import("./pages/admin/Settings"));
+const AdminCourses = lazy(() => import("./pages/admin/Courses"));
 
 const queryClient = new QueryClient();
+
+const ALL: UserRole[] = ["player", "parent", "coach", "club_admin", "admin"];
+const PLAYER: UserRole[] = ["player", "coach", "club_admin", "admin"];
+const CLUB: UserRole[] = ["coach", "club_admin", "admin"];
+const PARENT: UserRole[] = ["parent"];
+const ADMIN: UserRole[] = ["admin"];
+
+const guard = (roles: UserRole[], el: ReactNode) => (
+  <RouteGuard allowedRoles={roles}>{el}</RouteGuard>
+);
 
 const App = () => (
   <ErrorBoundary>
@@ -62,53 +76,57 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <DemoProvider>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/onboarding" element={<RouteGuard allowedRoles={['player','parent','coach','club_admin','admin']}><Onboarding /></RouteGuard>} />
-              <Route path="/onboarding-result" element={<RouteGuard allowedRoles={['player','parent','coach','club_admin','admin']}><OnboardingResult /></RouteGuard>} />
-              <Route path="/register" element={<Register />} />
+              <Suspense fallback={<div className="p-6"><PageSkeleton /></div>}>
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/onboarding" element={guard(ALL, <Onboarding />)} />
+                  <Route path="/onboarding-result" element={guard(ALL, <OnboardingResult />)} />
 
-              {/* Player routes */}
-              <Route path="/dashboard" element={<RouteGuard allowedRoles={['player', 'coach', 'club_admin', 'admin']}><Dashboard /></RouteGuard>} />
-              <Route path="/profile" element={<RouteGuard allowedRoles={['player', 'parent', 'coach', 'club_admin', 'admin']}><Profile /></RouteGuard>} />
-              <Route path="/calendar" element={<RouteGuard allowedRoles={['player', 'coach', 'club_admin', 'admin']}><Calendar /></RouteGuard>} />
-              <Route path="/training" element={<RouteGuard allowedRoles={['player', 'coach', 'club_admin', 'admin']}><Training /></RouteGuard>} />
-              <Route path="/chat" element={<RouteGuard allowedRoles={['player', 'coach', 'club_admin', 'admin']}><Chat /></RouteGuard>} />
-              <Route path="/settings" element={<RouteGuard allowedRoles={['player', 'parent', 'coach', 'club_admin', 'admin']}><Settings /></RouteGuard>} />
-              <Route path="/leaderboard" element={<RouteGuard allowedRoles={['player', 'coach', 'club_admin', 'admin']}><Leaderboard /></RouteGuard>} />
-              <Route path="/achievements" element={<RouteGuard allowedRoles={['player', 'coach', 'club_admin', 'admin']}><Achievements /></RouteGuard>} />
-              <Route path="/diagnostic" element={<RouteGuard allowedRoles={['player', 'coach', 'club_admin', 'admin']}><DiagnosticTest /></RouteGuard>} />
+                  {/* Authenticated routes share one shell (no se remonta al navegar) */}
+                  <Route element={<RouteGuard><AppShell /></RouteGuard>}>
+                    {/* Player */}
+                    <Route path="/dashboard" element={guard(PLAYER, <Dashboard />)} />
+                    <Route path="/profile" element={guard(ALL, <Profile />)} />
+                    <Route path="/calendar" element={guard(PLAYER, <Calendar />)} />
+                    <Route path="/training" element={guard(PLAYER, <Training />)} />
+                    <Route path="/chat" element={guard(PLAYER, <Chat />)} />
+                    <Route path="/settings" element={guard(ALL, <Settings />)} />
+                    <Route path="/leaderboard" element={guard(PLAYER, <Leaderboard />)} />
+                    <Route path="/achievements" element={guard(PLAYER, <Achievements />)} />
+                    <Route path="/diagnostic" element={guard(PLAYER, <DiagnosticTest />)} />
 
-              {/* Classroom routes */}
-              <Route path="/classroom" element={<RouteGuard allowedRoles={['player', 'coach', 'club_admin', 'admin']}><Classroom /></RouteGuard>} />
-              <Route path="/classroom/:moduleId" element={<RouteGuard allowedRoles={['player', 'coach', 'club_admin', 'admin']}><ClassroomModule /></RouteGuard>} />
-              <Route path="/classroom/:moduleId/lesson/:lessonId" element={<RouteGuard allowedRoles={['player', 'coach', 'club_admin', 'admin']}><ClassroomLesson /></RouteGuard>} />
+                    {/* Classroom */}
+                    <Route path="/classroom" element={guard(PLAYER, <Classroom />)} />
+                    <Route path="/classroom/:moduleId" element={guard(PLAYER, <ClassroomModule />)} />
+                    <Route path="/classroom/:moduleId/lesson/:lessonId" element={guard(PLAYER, <ClassroomLesson />)} />
 
-              {/* Parent routes */}
-              <Route path="/parent/dashboard" element={<RouteGuard allowedRoles={['parent']}><ParentDashboard /></RouteGuard>} />
-              <Route path="/parent/child" element={<RouteGuard allowedRoles={['parent']}><ParentChild /></RouteGuard>} />
-              <Route path="/parent/child/:childId" element={<RouteGuard allowedRoles={['parent']}><ParentChild /></RouteGuard>} />
-              <Route path="/parent/medical" element={<RouteGuard allowedRoles={['parent']}><ParentMedical /></RouteGuard>} />
+                    {/* Parent */}
+                    <Route path="/parent/dashboard" element={guard(PARENT, <ParentDashboard />)} />
+                    <Route path="/parent/child" element={guard(PARENT, <ParentChild />)} />
+                    <Route path="/parent/child/:childId" element={guard(PARENT, <ParentChild />)} />
+                    <Route path="/parent/medical" element={guard(PARENT, <ParentMedical />)} />
 
-              {/* Club routes */}
-              <Route path="/club/dashboard" element={<RouteGuard allowedRoles={['coach', 'club_admin', 'admin']}><ClubDashboard /></RouteGuard>} />
-              <Route path="/club/roster" element={<RouteGuard allowedRoles={['coach', 'club_admin', 'admin']}><Roster /></RouteGuard>} />
-              <Route path="/club/reports" element={<RouteGuard allowedRoles={['coach', 'club_admin', 'admin']}><Reports /></RouteGuard>} />
-              <Route path="/club/training-load" element={<RouteGuard allowedRoles={['coach', 'club_admin', 'admin']}><TrainingLoad /></RouteGuard>} />
-              <Route path="/club/communication" element={<RouteGuard allowedRoles={['coach', 'club_admin', 'admin']}><Communication /></RouteGuard>} />
+                    {/* Club */}
+                    <Route path="/club/dashboard" element={guard(CLUB, <ClubDashboard />)} />
+                    <Route path="/club/roster" element={guard(CLUB, <Roster />)} />
+                    <Route path="/club/reports" element={guard(CLUB, <Reports />)} />
+                    <Route path="/club/training-load" element={guard(CLUB, <TrainingLoad />)} />
+                    <Route path="/club/communication" element={guard(CLUB, <Communication />)} />
 
-              {/* Admin routes */}
-              <Route path="/admin/dashboard" element={<RouteGuard allowedRoles={['admin']}><AdminDashboard /></RouteGuard>} />
-              <Route path="/admin/users" element={<RouteGuard allowedRoles={['admin']}><Users /></RouteGuard>} />
-              <Route path="/admin/analytics" element={<RouteGuard allowedRoles={['admin']}><Analytics /></RouteGuard>} />
-              <Route path="/admin/settings" element={<RouteGuard allowedRoles={['admin']}><AdminSettings /></RouteGuard>} />
-              <Route path="/admin/courses" element={<RouteGuard allowedRoles={['admin']}><AdminCourses /></RouteGuard>} />
+                    {/* Platform admin */}
+                    <Route path="/admin/dashboard" element={guard(ADMIN, <AdminDashboard />)} />
+                    <Route path="/admin/users" element={guard(ADMIN, <Users />)} />
+                    <Route path="/admin/analytics" element={guard(ADMIN, <Analytics />)} />
+                    <Route path="/admin/settings" element={guard(ADMIN, <AdminSettings />)} />
+                    <Route path="/admin/courses" element={guard(ADMIN, <AdminCourses />)} />
+                  </Route>
 
-              {/* 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
             </DemoProvider>
           </BrowserRouter>
         </TooltipProvider>
