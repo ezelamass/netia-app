@@ -41,50 +41,35 @@ export interface NotificationGroup {
 export const NOTIFICATION_CONFIG: Record<NotificationType, {
   icon: string;
   colorClass: string;
-  borderColor: string;
 }> = {
   health_alert: {
     icon: '⚠️',
     colorClass: 'text-red-500',
-    borderColor: 'border-l-red-500',
   },
   reminder: {
     icon: '🔔',
     colorClass: 'text-blue-500',
-    borderColor: 'border-l-blue-500',
   },
   achievement: {
     icon: '🏆',
     colorClass: 'text-amber-500',
-    borderColor: 'border-l-amber-500',
   },
   ai_message: {
     icon: '💬',
     colorClass: 'text-primary',
-    borderColor: 'border-l-primary',
   },
   streak: {
     icon: '🔥',
     colorClass: 'text-orange-500',
-    borderColor: 'border-l-orange-500',
   },
   info: {
     icon: 'ℹ️',
     colorClass: 'text-muted-foreground',
-    borderColor: 'border-l-muted-foreground',
   },
   tournament: {
     icon: '🏁',
     colorClass: 'text-green-500',
-    borderColor: 'border-l-green-500',
   },
-};
-
-// Avatar colors for AI messages
-export const AVATAR_COLORS: Record<AvatarType, string> = {
-  TINO: 'border-l-tino',
-  ZAHIA: 'border-l-zahia',
-  ROMA: 'border-l-roma',
 };
 
 // Time group labels in Spanish

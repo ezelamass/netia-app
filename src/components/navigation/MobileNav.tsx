@@ -29,14 +29,14 @@ export const MobileNav = () => {
             onTouchStart={() => prefetchRoute(item.href)}
           >
             <span className={pill}><item.icon className="h-5 w-5" strokeWidth={2} /></span>
-            <span className="text-[11px] font-medium leading-none">{item.short ?? item.label}</span>
+            <span className="text-xs font-medium leading-none">{item.short ?? item.label}</span>
           </NavLink>
         ))}
         <Sheet>
           <SheetTrigger asChild>
             <button type="button" className={itemClass} aria-label="Más opciones">
               <span className={pill}><MoreHorizontal className="h-5 w-5" strokeWidth={2} /></span>
-              <span className="text-[11px] font-medium leading-none">Más</span>
+              <span className="text-xs font-medium leading-none">Más</span>
             </button>
           </SheetTrigger>
           <SheetContent side="bottom" className="rounded-t-xl pb-safe">

@@ -19,7 +19,7 @@ const dayLabel = (iso: string) => {
 };
 
 const DaySeparator = memo(({ label }: { label: string }) => (
-  <div className="my-3 flex items-center gap-3 text-[11px] font-medium text-muted-foreground" role="separator">
+  <div className="my-3 flex items-center gap-3 text-xs font-medium text-muted-foreground" role="separator">
     <span className="h-px flex-1 bg-border/60" />
     {label}
     <span className="h-px flex-1 bg-border/60" />

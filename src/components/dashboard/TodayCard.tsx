@@ -13,7 +13,7 @@ const CHECKIN_ICON: Record<'sleep' | 'hydration' | 'energy' | 'pain', IconKey> =
   sleep: 'sleep', hydration: 'hydration', energy: 'energy', pain: 'pain',
 };
 
-const STATUS_TEXT = { ok: 'text-[hsl(160_84%_20%)]', warning: 'text-[hsl(32_95%_26%)]', critical: 'text-[hsl(350_80%_32%)]', unknown: 'text-[hsl(16_30%_22%)]' } as const;
+const STATUS_TEXT = { ok: 'text-onbrand-ok', warning: 'text-onbrand-warn', critical: 'text-onbrand-crit', unknown: 'text-onbrand-soft' } as const;
 
 interface TodayCardProps {
   /** Eventos de hoy (propios + del club), ordenados */
@@ -42,11 +42,11 @@ export const TodayCard = memo(({ todayEvents }: TodayCardProps) => {
   return (
     <section
       aria-label="Hoy"
-      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-orange to-[hsl(26_100%_66%)] p-4 text-[hsl(16_60%_10%)] shadow-card md:p-5"
+      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-orange to-brand-orange-light p-4 text-onbrand shadow-card md:p-5"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wide text-[hsl(16_60%_16%)]">
+          <p className="text-xs font-bold uppercase tracking-wide text-onbrand">
             Hoy{next?.startTime ? ` · ${next.startTime}` : ''}
           </p>
           {next && nextIcon ? (
@@ -108,14 +108,14 @@ export const TodayCard = memo(({ todayEvents }: TodayCardProps) => {
                   <span className={cn('text-sm font-bold tabular-nums', STATUS_TEXT[status])}>
                     {todayLog ? ind.getValue(todayLog) : '—'}
                   </span>
-                  <span className="text-[11px] font-medium text-[hsl(16_30%_22%)]">{ind.label}</span>
+                  <span className="text-xs font-medium text-onbrand-soft">{ind.label}</span>
                 </button>
               </li>
             );
           })}
         </ul>
         {hasLoggedToday && (
-          <p className="mt-1 flex items-center justify-center gap-1 pb-1 text-xs font-semibold text-[hsl(160_84%_20%)]">
+          <p className="mt-1 flex items-center justify-center gap-1 pb-1 text-xs font-semibold text-onbrand-ok">
             <Check className="h-4 w-4" aria-hidden="true" />Día registrado · +20 XP
           </p>
         )}

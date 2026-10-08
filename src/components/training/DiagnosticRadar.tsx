@@ -94,7 +94,7 @@ export function DiagnosticRadar({ diagnostic }: DiagnosticRadarProps) {
                   <span className="font-semibold text-foreground">{d.subject}</span>
                   <span className="font-bold text-primary">{d.score}</span>
                 </div>
-                <p className="text-muted-foreground leading-tight text-[10px] mt-0.5">{d.detail}</p>
+                <p className="text-muted-foreground leading-tight text-xs mt-0.5">{d.detail}</p>
               </div>
             ))}
           </div>

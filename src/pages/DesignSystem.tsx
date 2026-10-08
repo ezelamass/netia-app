@@ -199,7 +199,7 @@ const DesignSystem = () => {
                 <IconBadge icon={icon} tone={tone} size="sm" />
                 <div className="min-w-0">
                   <p className="truncate font-mono text-xs font-medium">{key}</p>
-                  <p className="text-[11px] text-muted-foreground">{tone}</p>
+                  <p className="text-xs text-muted-foreground">{tone}</p>
                 </div>
               </div>
             ))}

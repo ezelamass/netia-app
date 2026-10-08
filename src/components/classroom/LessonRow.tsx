@@ -43,7 +43,7 @@ export function LessonRow({
         ) : isLocked ? (
           <Lock className="w-3 h-3 text-muted-foreground" />
         ) : (
-          <span className="text-[9px] font-bold text-muted-foreground">{number}</span>
+          <span className="text-xs font-bold text-muted-foreground">{number}</span>
         )}
       </div>
 
@@ -53,13 +53,13 @@ export function LessonRow({
           {title}
         </p>
         {durationMin > 0 && (
-          <p className="text-[10px] text-muted-foreground">{durationMin} min</p>
+          <p className="text-xs text-muted-foreground">{durationMin} min</p>
         )}
       </div>
 
       {/* Quiz badge */}
       {hasQuiz && (
-        <Badge variant="secondary" className="text-[10px] shrink-0">Quiz</Badge>
+        <Badge variant="secondary" className="text-xs shrink-0">Quiz</Badge>
       )}
     </motion.button>
   );

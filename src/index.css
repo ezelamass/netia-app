@@ -82,6 +82,34 @@ All colors MUST be HSL.
 
     --shadow-card: 0 1px 2px hsl(215 25% 20% / 0.05), 0 1px 3px hsl(215 25% 20% / 0.06);
     --shadow-pop: 0 8px 24px hsl(215 25% 20% / 0.12);
+    --shadow-bubble: 0 1px 0.5px rgb(0 0 0 / 0.13);
+
+    /* Texto sobre el naranja de marca (TodayCard): contraste AA */
+    --brand-orange-light: 26 100% 66%;
+    --on-brand: 16 60% 10%;
+    --on-brand-soft: 16 30% 22%;
+    --on-brand-ok: 160 84% 20%;
+    --on-brand-warn: 32 95% 26%;
+    --on-brand-crit: 350 80% 32%;
+
+    /* IA: la señal exclusiva es el gradiente del equipo (TINO → ZAHIA → ROMA). Solo la IA lo usa, y como trazo, nunca como superficie. */
+    --ai-gradient: linear-gradient(120deg, hsl(var(--avatar-tino)) 0%, hsl(var(--avatar-zahia)) 50%, hsl(var(--avatar-roma)) 100%);
+    --ai-shimmer: 220 14% 92%; /* platino: shimmer de espera */
+    --ai-shimmer-hi: 0 0% 100%;
+
+    /* Chat estilo WhatsApp */
+    --chat-bg: 36 33% 94%;
+    --chat-out: 211 100% 94%;
+    --chat-system: 48 100% 92%;
+    --chat-pattern-opacity: 0.05;
+
+    /* Movimiento */
+    --dur-fast: 120ms;
+    --dur-base: 200ms;
+    --dur-slow: 320ms;
+    --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --ease-in: cubic-bezier(0.4, 0, 1, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     
     /* Gradients */
     --gradient-netia: linear-gradient(135deg, hsl(211 100% 50%), hsl(18 100% 61%));
@@ -144,6 +172,18 @@ All colors MUST be HSL.
     --input: 222 18% 20%;
     --ring: 211 100% 60%;
 
+    --avatar-tino: 211 100% 41%;
+    --avatar-zahia: 162 100% 45%;
+    --avatar-roma: 257 89% 68%;
+    --ai-shimmer: 220 10% 20%;
+    --ai-shimmer-hi: 220 10% 28%;
+
+    --chat-bg: 220 18% 10%;
+    --chat-out: 211 45% 24%;
+    --chat-system: 45 40% 20%;
+    --chat-pattern-opacity: 0.04;
+    --shadow-bubble: 0 1px 0.5px rgb(0 0 0 / 0.4);
+
     --netia-text-primary: 210 20% 96%;
     --netia-text-secondary: 215 16% 75%;
     --netia-text-disabled: 215 12% 50%;
@@ -162,6 +202,11 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
+  /* Shimmer platino de espera: el color dice "IA" y el movimiento "trabajando"; acá solo se mueve, no se tiñe. */
+  .bg-shimmer {
+    background-image: linear-gradient(90deg, hsl(var(--ai-shimmer)) 25%, hsl(var(--ai-shimmer-hi)) 50%, hsl(var(--ai-shimmer)) 75%);
+    background-size: 200% 100%;
+  }
   .tabular { font-variant-numeric: tabular-nums; }
   .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
   .h-screen-dvh { height: 100dvh; }
@@ -235,9 +280,15 @@ All colors MUST be HSL.
     font-family: 'Poppins', sans-serif;
     font-weight: 700;
   }
-  
-  /* AI Chat Messages */
-  .ai-message {
-    font-family: 'Nunito Sans', sans-serif;
+}
+
+/* Movimiento: con "reducir movimiento" no hay desplazamientos, escalas ni loops; solo fades cortos. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
+  .motion-fade-only { transition: opacity 120ms linear !important; }
 }

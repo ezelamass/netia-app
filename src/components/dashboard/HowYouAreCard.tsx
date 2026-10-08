@@ -25,12 +25,12 @@ export const HowYouAreCard = memo(({ weeklyCompliance, energy7 }: HowYouAreCardP
       <div className={cn('flex items-center gap-5 px-4 pb-4', !open && 'hidden md:flex')}>
         <div className="flex flex-col items-center gap-1">
           <ProgressRing value={weeklyCompliance} size={64} />
-          <span className="text-[11px] text-muted-foreground">Registro semanal</span>
+          <span className="text-xs text-muted-foreground">Registro semanal</span>
         </div>
         {energy7.length > 1 && (
           <div className="flex flex-col gap-1">
             <Sparkline data={energy7} color="hsl(16 88% 44%)" width={140} height={36} />
-            <span className="text-[11px] text-muted-foreground">Tu energía, últimos 7 días</span>
+            <span className="text-xs text-muted-foreground">Tu energía, últimos 7 días</span>
           </div>
         )}
       </div>

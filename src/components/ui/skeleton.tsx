@@ -1,18 +1,8 @@
 import { cn } from "@/lib/utils";
 
+/** Placeholder con shimmer platino. Solo se muestra si la carga pasa 150 ms (ver useDelayedFlag). */
 function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div 
-      className={cn(
-        "rounded-md bg-muted relative overflow-hidden",
-        "before:absolute before:inset-0",
-        "before:bg-gradient-to-r before:from-transparent before:via-background/50 before:to-transparent",
-        "before:animate-[shimmer_2s_infinite]",
-        className
-      )} 
-      {...props} 
-    />
-  );
+  return <div className={cn("rounded-md bg-shimmer animate-shimmer", className)} {...props} />;
 }
 
 export { Skeleton };

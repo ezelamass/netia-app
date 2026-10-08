@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { PartyPopper, ArrowRight, Sparkles } from 'lucide-react';
+import { PartyPopper, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { AvatarGuide } from '@/components/onboarding/AvatarGuide';
@@ -105,9 +105,9 @@ const OnboardingResult = () => {
   const otherAvatars = getAvatarIntros(selectedAvatar);
 
   const avatarGradients: Record<string, string> = {
-    tino: 'from-[hsl(211,100%,35%)] to-[hsl(211,100%,55%)]',
-    zahia: 'from-[hsl(162,100%,30%)] to-[hsl(162,100%,50%)]',
-    roma: 'from-[hsl(257,89%,50%)] to-[hsl(280,89%,65%)]',
+    tino: 'from-tino to-tino/80',
+    zahia: 'from-zahia to-zahia/80',
+    roma: 'from-roma to-roma/80',
   };
 
   return (
@@ -144,7 +144,6 @@ const OnboardingResult = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
           >
-            <Sparkles className="absolute top-3 right-3 w-6 h-6 opacity-50" />
             <div className="text-4xl mb-2">{recommendation.levelEmoji}</div>
             <h2 className="text-xl font-bold mb-1">{recommendation.levelLabel}</h2>
             <p className="text-sm opacity-90">{recommendation.objectiveSuggestion}</p>

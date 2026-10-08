@@ -10,7 +10,7 @@ import {
   Users, 
   CheckCircle2,
   MessageCircle,
-  Sparkles,
+  Rocket,
   Target
 } from 'lucide-react';
 
@@ -68,7 +68,7 @@ const VARIANT_DEFAULTS: Record<EmptyStateVariant, {
     description: 'Tu aventura deportiva empieza hoy. Completá tu primer registro y conocé a tus coaches IA.',
     actionLabel: 'Empezar',
     avatar: 'all',
-    icon: <Sparkles className="w-6 h-6" />,
+    icon: <Rocket className="w-6 h-6" />,
   },
   'no-events': {
     title: 'Tu calendario está vacío',

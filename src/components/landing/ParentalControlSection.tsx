@@ -33,7 +33,7 @@ const ParentalControlSection = () => {
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.25)_0%,transparent_60%)]" />
 
                   {/* Top curved text */}
-                  <span className="text-white/90 text-[9px] sm:text-[11px] font-semibold tracking-[0.25em] uppercase mb-1 relative z-10">
+                  <span className="text-white/90 text-xs font-semibold tracking-[0.25em] uppercase mb-1 relative z-10">
                     Control Parental
                   </span>
 
@@ -51,7 +51,7 @@ const ParentalControlSection = () => {
                   {/* Bottom badge */}
                   <div className="flex items-center gap-1.5 mt-2 relative z-10">
                     <ShieldCheck className="w-4 h-4 text-white drop-shadow-sm" />
-                    <span className="text-white text-[10px] sm:text-xs font-semibold tracking-wide">
+                    <span className="text-white text-xs font-semibold tracking-wide">
                       Protected Today
                     </span>
                   </div>

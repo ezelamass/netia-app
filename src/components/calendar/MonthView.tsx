@@ -28,7 +28,7 @@ export const MonthView = memo(({ month, selected, onSelect, dotsByDay }: MonthVi
     <div className="rounded-2xl border border-border/60 bg-card p-2 sm:p-3">
       <div className="mb-1 grid grid-cols-7">
         {WEEKDAYS.map((d, i) => (
-          <span key={i} className="py-1 text-center text-[11px] font-medium text-muted-foreground">{d}</span>
+          <span key={i} className="py-1 text-center text-xs font-medium text-muted-foreground">{d}</span>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1">

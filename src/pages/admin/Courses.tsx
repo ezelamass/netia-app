@@ -230,7 +230,7 @@ const AdminCourses = () => {
                                       {lesson.videoUrl ? <Video className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
                                       <span className="truncate">{lesson.title}</span>
                                       {lesson.durationMin > 0 && <span className="text-xs text-muted-foreground shrink-0">{lesson.durationMin}min</span>}
-                                      {lesson.quiz && <Badge variant="secondary" className="text-[10px] shrink-0">Quiz</Badge>}
+                                      {lesson.quiz && <Badge variant="secondary" className="text-xs shrink-0">Quiz</Badge>}
                                     </div>
                                     <div className="flex items-center gap-1 shrink-0">
                                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openQuizEditor(lesson.id, lesson.quiz)}>

@@ -33,7 +33,7 @@ export const AgendaItem = memo(({ event, source = 'mio', onToggleComplete, onCli
         )}
       </button>
       {source === 'club' && (
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-info-soft px-2 py-0.5 text-[11px] font-semibold text-info">
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-info-soft px-2 py-0.5 text-xs font-semibold text-info">
           <Shield className="h-3 w-3" aria-hidden="true" />Club
         </span>
       )}

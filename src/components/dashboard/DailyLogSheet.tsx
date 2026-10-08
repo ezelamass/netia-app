@@ -290,7 +290,7 @@ export const DailyLogSheet = ({ open, onClose, onSave, initialStep = 0 }: DailyL
                       )}
                     >
                       <span className="text-3xl mb-1">{option.emoji}</span>
-                      <span className="text-[10px] text-muted-foreground">{option.label}</span>
+                      <span className="text-xs text-muted-foreground">{option.label}</span>
                     </button>
                   ))}
                 </div>

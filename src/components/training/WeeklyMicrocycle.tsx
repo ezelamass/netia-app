@@ -41,7 +41,7 @@ export const WeeklyMicrocycle = memo(({ sessions, selectedDay, onSelectDay }: Pr
             !sel && today && 'border-primary/40 bg-primary-soft text-primary',
           )}
         >
-          <span className="text-[11px] font-medium uppercase">{s.dayLabel}</span>
+          <span className="text-xs font-medium uppercase">{s.dayLabel}</span>
           <span
             className={cn(
               'flex h-7 w-7 items-center justify-center rounded-full',
@@ -50,7 +50,7 @@ export const WeeklyMicrocycle = memo(({ sessions, selectedDay, onSelectDay }: Pr
           >
             <Icon className="h-4 w-4" aria-hidden="true" />
           </span>
-          <span className="max-w-full truncate text-[10px] font-medium">{label}</span>
+          <span className="max-w-full truncate text-xs font-medium">{label}</span>
         </button>
       );
     })}

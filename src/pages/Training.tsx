@@ -1,7 +1,7 @@
 import { Suspense, lazy, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Clock, Moon, Play, Sparkles, Flame, Dumbbell, Wind, type LucideIcon } from 'lucide-react';
+import { Clock, Moon, Play, Flame, Dumbbell, Wind, type LucideIcon } from 'lucide-react';
 import { AppLayout } from '@/layouts/AppLayout';
 import { useTrainingPlan, type DaySession, type ExerciseBlock } from '@/hooks/useTrainingPlan';
 import { useAuth } from '@/contexts/AuthContext';
@@ -153,7 +153,7 @@ const Training = () => {
 
         {!plan && (
           <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card p-4">
-            <IconBadge icon={isTenis ? Clock : Sparkles} />
+            <IconBadge icon={isTenis ? Clock : Dumbbell} />
             <div className="min-w-0 flex-1 space-y-2">
               <h2 className="font-heading text-base font-semibold">
                 {isTenis ? 'Tu plan se está preparando' : userSport ? `Próximamente para ${userSport}` : 'Completá tu perfil'}

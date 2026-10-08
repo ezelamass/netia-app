@@ -53,7 +53,7 @@ export const WeekStrip = memo(({ weekStart, selected, onSelect, dotsByDay, onPre
           const dots = (dotsByDay[key] ?? []).slice(0, 3);
           const content = (
             <>
-              <span className="text-[11px] font-medium uppercase">{format(d, 'EEEEE', { locale: es })}</span>
+              <span className="text-xs font-medium uppercase">{format(d, 'EEEEE', { locale: es })}</span>
               <span className="text-base font-bold tabular-nums">{format(d, 'd')}</span>
               <span className="flex h-1.5 items-center gap-0.5" aria-hidden="true">
                 {dots.map((t, i) => (

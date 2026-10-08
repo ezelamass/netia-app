@@ -41,7 +41,7 @@ export const XPProgressBar = ({ currentXP, levelProgress, currentLevel, nextLeve
         />
       </div>
       {compact && (
-        <p className="text-[10px] text-muted-foreground mt-0.5 text-right">
+        <p className="text-xs text-muted-foreground mt-0.5 text-right">
           {currentXP.toLocaleString()} XP
         </p>
       )}

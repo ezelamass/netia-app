@@ -72,7 +72,7 @@ export const AgentSwitcher = memo(({ value, onChange, unread, variant = 'tabs', 
                 <AgentAvatar agent={id} size={24} ring={active} />
                 <span className={cn('flex flex-col leading-tight', compact && 'hidden sm:flex')}>
                   <span className="text-sm font-semibold">{agent.name}</span>
-                  {!compact && <span className="text-[11px] text-muted-foreground">{agent.area}</span>}
+                  {!compact && <span className="text-xs text-muted-foreground">{agent.area}</span>}
                 </span>
                 {unread?.[id] && !active && (
                   <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-card" aria-hidden="true" />

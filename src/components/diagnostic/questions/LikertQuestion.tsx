@@ -29,7 +29,7 @@ export function LikertQuestion({ value, onChange }: LikertQuestionProps) {
           )}
         >
           <span className="text-2xl">{opt.emoji}</span>
-          <span className="text-[10px] font-medium text-muted-foreground">{opt.label}</span>
+          <span className="text-xs font-medium text-muted-foreground">{opt.label}</span>
         </button>
       ))}
     </div>

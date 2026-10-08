@@ -49,7 +49,7 @@ export function TestCard({ test, lastCompletedAt, onStart }: TestCardProps) {
           </div>
 
           {lastCompletedAt && (
-            <p className="text-[10px] text-muted-foreground mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               Último: {new Date(lastCompletedAt).toLocaleDateString('es-AR')}
             </p>
           )}

@@ -15,7 +15,7 @@ const avatars = [
     name: 'TINO', 
     image: AGENTS.TINO.image, 
     description: 'Entrenador físico',
-    gradient: 'from-[hsl(211,100%,35%)] to-[hsl(211,100%,50%)]',
+    gradient: 'from-tino to-tino/80',
     emoji: '💪'
   },
   { 
@@ -23,7 +23,7 @@ const avatars = [
     name: 'ZAHIA', 
     image: AGENTS.ZAHIA.image, 
     description: 'Nutrición y bienestar',
-    gradient: 'from-[hsl(162,100%,39%)] to-[hsl(162,100%,50%)]',
+    gradient: 'from-zahia to-zahia/80',
     emoji: '🥗'
   },
   { 
@@ -31,7 +31,7 @@ const avatars = [
     name: 'ROMA', 
     image: AGENTS.ROMA.image, 
     description: 'Entrenadora mental',
-    gradient: 'from-[hsl(257,89%,62%)] to-[hsl(280,89%,70%)]',
+    gradient: 'from-roma to-roma/80',
     emoji: '🧠'
   },
 ];
