@@ -15,12 +15,12 @@ export function DemoBanner() {
   return (
     <div className="no-print fixed top-0 left-0 right-0 z-[60] h-10 bg-foreground text-background" role="region" aria-label="Demo">
       <div className="mx-auto flex h-full max-w-screen-2xl items-center justify-between gap-2 px-3 sm:px-4">
-        <p className="truncate text-xs">
+        <p className="shrink-0 text-xs">
           <span className="font-semibold">Demo</span>
           <span className="hidden sm:inline"> · datos de ejemplo</span>
         </p>
 
-        <div className="flex items-center gap-1">
+        <div className="flex min-w-0 items-center gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs text-background hover:bg-background/15 hover:text-background">
