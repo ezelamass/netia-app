@@ -1,0 +1,5 @@
+# Archivos internos de trabajo: quedan en el repo pero no entran al ZIP de "Download ZIP" ni a `git archive`.
+CLAUDE.md export-ignore
+.claude export-ignore
+docs/aplicar-produccion.md export-ignore
+.gitattributes export-ignore
