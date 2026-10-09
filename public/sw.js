@@ -25,8 +25,7 @@ self.addEventListener('fetch', (e) => {
   if (req.mode === 'navigate') {
     e.respondWith(
       fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(SHELL).then((c) => c.put('/', copy));
+        if (res.ok) { const copy = res.clone(); caches.open(SHELL).then((c) => c.put('/', copy)); }
         return res;
       }).catch(() => caches.match('/')),
     );
