@@ -11,3 +11,10 @@ requestAnimationFrame(() => requestAnimationFrame(() => {
   splash.style.opacity = "0";
   window.setTimeout(() => splash.remove(), 150);
 }));
+
+// PWA: el service worker solo se registra en producción (en dev rompería el HMR).
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}

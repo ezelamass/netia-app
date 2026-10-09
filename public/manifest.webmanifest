@@ -1,0 +1,22 @@
+{
+  "name": "NETIA · Gestión de clubes",
+  "short_name": "NETIA",
+  "description": "Socios, cuotas, aptos médicos, asistencia y comunicación con las familias en un solo lugar.",
+  "lang": "es-AR",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#007BFF",
+  "categories": ["sports", "education", "productivity"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Probar la demo", "url": "/demo", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
