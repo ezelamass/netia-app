@@ -28,5 +28,8 @@ dist-ssr
 *.sln
 *.sw?
 
+# Herramientas locales
+.claude/
+
 # Supabase CLI runtime
 supabase/.temp/
